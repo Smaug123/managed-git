@@ -1,9 +1,9 @@
 ﻿namespace Git
 
+open System.IO
+
 [<RequireQualifiedAccess>]
 module Blob =
-    let create (content : byte array) =
-        {
-            Header = Header.Blob content.Length
-            Content = content
-        }
+    let encode (content : byte array) : byte array = content
+    let decode (file : byte array) : byte array =
+        file

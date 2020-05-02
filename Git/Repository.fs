@@ -43,6 +43,9 @@ module Repository =
         let objectDir = createSubdir gitDir "objects"
         let packDir = createSubdir objectDir "pack"
         let infoDir = createSubdir objectDir "info"
+        let refsDir = createSubdir gitDir "refs"
+        let headsDir = createSubdir refsDir "heads"
+        let tagsDir = createSubdir refsDir "tags"
 
         r
         |> Ok

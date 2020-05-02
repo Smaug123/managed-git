@@ -18,7 +18,8 @@
 
     <ItemGroup>
         <Compile Include="TestInit.fs" />
-        <Compile Include="TestObject.fs" />
+        <Compile Include="TestBlob.fs" />
+        <Compile Include="TestTree.fs" />
     </ItemGroup>
 
     <ItemGroup>

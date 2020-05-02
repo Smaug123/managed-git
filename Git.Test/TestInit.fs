@@ -10,7 +10,7 @@ open Git
 module TestInit =
 
     [<Test>]
-    let Test1 () =
+    let ``test initialisation`` () =
         let fs = MockFileSystem ()
         let dir = fs.Path.GetTempFileName ()
         let gitDir = fs.DirectoryInfo.FromDirectoryName (dir + "_test")

@@ -20,6 +20,7 @@
         <Compile Include="TestInit.fs" />
         <Compile Include="TestBlob.fs" />
         <Compile Include="TestTree.fs" />
+        <Compile Include="TestFromGitBook.fs" />
     </ItemGroup>
 
     <ItemGroup>

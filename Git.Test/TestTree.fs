@@ -52,6 +52,7 @@ module TestTree =
 
         b
         |> EncodedObject.write repo
+        |> ignore
 
         let backIn =
             EncodedObject.catFile repo (EncodedObject.hash b)

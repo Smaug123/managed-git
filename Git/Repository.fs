@@ -16,7 +16,7 @@ type InitFailure =
 
 [<RequireQualifiedAccess>]
 module Repository =
-    let internal gitDir (r : Repository) : IDirectoryInfo =
+    let gitDir (r : Repository) : IDirectoryInfo =
         r.Fs.Path.Combine(r.Directory.FullName, ".git") |> r.Fs.DirectoryInfo.FromDirectoryName
 
     let internal objectDir (r : Repository) : IDirectoryInfo =
@@ -28,6 +28,11 @@ module Repository =
             |> r.FileSystem.DirectoryInfo.FromDirectoryName
         output.Create ()
         output
+
+    let make (dir : IDirectoryInfo) : Repository option =
+        if dir.Exists && dir.EnumerateDirectories () |> Seq.map (fun i -> i.Name) |> Seq.contains ".git" then
+            Some { Directory = dir }
+        else None
 
     let init (dir : IDirectoryInfo) : Result<Repository, InitFailure> =
         if not dir.Exists then Error DirectoryDoesNotExist

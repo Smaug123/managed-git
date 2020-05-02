@@ -1,9 +1,8 @@
 namespace Git
 
-open System
 open System.IO
 open System.Security.Cryptography
-open System.IO.Compression
+open Ionic.Zlib
 
 type EncodedObject =
     {
@@ -51,7 +50,7 @@ module EncodedObject =
             |> Array.concat
 
         use ms = new MemoryStream(toWrite)
-        use ds = new DeflateStream(dest, CompressionMode.Compress)
+        use ds = new Ionic.Zlib.ZlibStream(dest, CompressionMode.Compress)
         ms.CopyTo ds
 
     /// Read the header of the stream seeked to the beginning of the content.
@@ -73,7 +72,7 @@ module EncodedObject =
 
     let private uncompress (s : Stream) : EncodedObject =
         use ms = new MemoryStream ()
-        use ds = new DeflateStream(s, CompressionMode.Decompress)
+        use ds = new Ionic.Zlib.ZlibStream(s, CompressionMode.Decompress)
         ds.CopyTo ms
         ms.Seek(0L, SeekOrigin.Begin) |> ignore
 
@@ -91,15 +90,18 @@ module EncodedObject =
         if r.PeekChar () <> -1 then failwith "unexpectedly not at end"
         result
 
-    let write (r : Repository) (o : EncodedObject) : unit =
-        let hash = hash o |> Hash.toString
-        let objectName = hash.[2..]
-        let subdir = hash.[0..1]
+    let write (r : Repository) (o : EncodedObject) : Hash =
+        let hash = hash o
+        let hashStr = Hash.toString hash
+        let objectName = hashStr.[2..]
+        let subdir = hashStr.[0..1]
 
         let d = Repository.createSubdir (Repository.objectDir r) subdir
         use filestream = r.Fs.File.Create (r.Fs.Path.Combine (d.FullName, objectName))
 
         compress o filestream
+
+        hash
 
     let catFile (r : Repository) (hash : Hash) : EncodedObject =
         let hash = hash |> Hash.toString

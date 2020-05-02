@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Git", "Git\Git.fsproj", "{0ABD60D8-0B57-478C-8CA4-7081A74E5BCD}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Git.Test", "Git.Test\Git.Test.fsproj", "{CABAAA8F-186F-434A-A9F8-E847B69C3164}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0ABD60D8-0B57-478C-8CA4-7081A74E5BCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ABD60D8-0B57-478C-8CA4-7081A74E5BCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ABD60D8-0B57-478C-8CA4-7081A74E5BCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ABD60D8-0B57-478C-8CA4-7081A74E5BCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

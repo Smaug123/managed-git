@@ -5,6 +5,7 @@ open System.IO
 open System.IO.Abstractions.TestingHelpers
 open NUnit.Framework
 open FsUnitTyped
+open Microsoft.FSharp.Data.UnitSystems.SI.UnitNames
 
 open Git
 
@@ -104,7 +105,6 @@ module TestFromGitBook =
             |> shouldEqual "version 2\n"
         | s -> failwithf "Oh no: +%A" s
 
-        // TODO - implement the staging area and then test it here
         // Add to the tree
         let tree1 =
             [
@@ -220,3 +220,95 @@ module TestFromGitBook =
         | s -> failwithf "Oh no: +%A" s
 
         // TODO: the section on commits
+        let scott =
+            {
+                Name = "Scott Chacon"
+                Email = "schacon@gmail.com"
+                DateTimezone = "-0700"
+                Date = 1243040974<second>
+            }
+
+        let commit1 =
+            {
+                Committer = scott
+                Author = scott
+                CommitMessage = "First commit\n"
+                Parents = []
+                Tree = tree1
+            }
+            |> Object.Commit
+
+        let c1Hash =
+            commit1
+            |> EncodedObject.encode
+            |> EncodedObject.write repo
+        // For reasons I don't understand, `git` diverges from Pro Git at this point.
+        // Pro Git's version: "fdf4fc3344e67ab068f836878b6c4951e3b15f3d"
+        // `git` (version 2.26.1):
+        c1Hash
+        |> Hash.toString
+        |> shouldEqual "70d4408b5020e81d19906d6abdd87a73233ebf34"
+
+        // Note that we can roundtrip (not done explicitly in the book):
+        EncodedObject.catFile repo c1Hash
+        |> EncodedObject.decode
+        |> shouldEqual commit1
+
+        let commit2 =
+            {
+                Committer = scott
+                Author = scott
+                CommitMessage = "Second commit\n"
+                Parents = [c1Hash]
+                Tree = tree2
+            }
+            |> Object.Commit
+        let c2Hash =
+            commit2
+            |> EncodedObject.encode
+            |> EncodedObject.write repo
+        c2Hash
+        |> Hash.toString
+        |> shouldEqual "1513b13a72f5277252cfce4ed0eda0620aca2f6a"
+
+        EncodedObject.catFile repo c2Hash
+        |> EncodedObject.decode
+        |> shouldEqual commit2
+
+        let commit3 =
+            {
+                Committer = scott
+                Author = scott
+                CommitMessage = "Third commit\n"
+                Parents = [c2Hash]
+                Tree = tree3
+            }
+            |> Object.Commit
+        let c3Hash =
+            commit3
+            |> EncodedObject.encode
+            |> EncodedObject.write repo
+        c3Hash
+        |> Hash.toString
+        |> shouldEqual "95cce637b4e889eee8042515db402128bd62c0d2"
+
+        EncodedObject.catFile repo c3Hash
+        |> EncodedObject.decode
+        |> shouldEqual commit3
+
+        objectsDir.EnumerateFiles ("*", SearchOption.AllDirectories)
+        |> Seq.map (fun f -> f.Directory.Name, f.Name)
+        |> Seq.toList
+        |> List.sort
+        |> shouldEqual [
+               "01", "55eb4229851634a0f03eb265b69f5a2d56f341" // tree 2
+               "15", "13b13a72f5277252cfce4ed0eda0620aca2f6a" // commit 2
+               "1f", "7a7a472abf3dd9643fd615f6da379c4acb3e3a" // test.txt v2
+               "3c", "4e9cd789d88d8d89c1073707c3585e41b0e614" // tree 3
+               "70", "d4408b5020e81d19906d6abdd87a73233ebf34" // commit 1
+               "83", "baae61804e65cc73a7201a7252750c76066a30" // test.txt v1
+               "95", "cce637b4e889eee8042515db402128bd62c0d2" // commit 3
+               "d6", "70460b4b4aece5915caf5c68d12f560a9fe3e4" // 'test content'
+               "d8", "329fc1cc938780ffdd9f94e0d364e0ea74f579" // tree 1
+               "fa", "49b077972391ad58037050f2a75f74e3671e92" // new.txt
+           ]

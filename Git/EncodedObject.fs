@@ -17,6 +17,7 @@ module EncodedObject =
             match o with
             | Object.Blob c -> Blob.encode c
             | Object.Tree entries -> Tree.encode entries
+            | Object.Commit c -> Commit.encode c
 
         {
             Header =
@@ -25,6 +26,8 @@ module EncodedObject =
                     Header.Blob contents.Length
                 | Object.Tree _ ->
                     Header.Tree contents.Length
+                | Object.Commit _ ->
+                    Header.Commit contents.Length
             Content = contents
         }
 
@@ -36,6 +39,9 @@ module EncodedObject =
         | Header.Blob _ ->
             Blob.decode e.Content
             |> Object.Blob
+        | Header.Commit _ ->
+            Commit.decode e.Content
+            |> Object.Commit
 
     let hash (o : EncodedObject) : Hash =
         use hasher = SHA1.Create ()
@@ -50,7 +56,7 @@ module EncodedObject =
             |> Array.concat
 
         use ms = new MemoryStream(toWrite)
-        use ds = new Ionic.Zlib.ZlibStream(dest, CompressionMode.Compress)
+        use ds = new Ionic.Zlib.ZlibStream(dest, CompressionMode.Compress, CompressionLevel.Level0)
         ms.CopyTo ds
 
     /// Read the header of the stream seeked to the beginning of the content.
@@ -82,6 +88,7 @@ module EncodedObject =
             match header with
             | Header.Blob i -> i
             | Header.Tree i -> i
+            | Header.Commit i -> i
         let result =
             {
                 Header = header

@@ -21,6 +21,7 @@
         <Compile Include="TestBlob.fs" />
         <Compile Include="TestTree.fs" />
         <Compile Include="TestFromGitBook.fs" />
+        <Compile Include="TestCommit.fs" />
     </ItemGroup>
 
     <ItemGroup>

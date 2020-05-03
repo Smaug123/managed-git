@@ -1,7 +1,5 @@
 ﻿namespace Git
 
-open System.IO
-
 [<RequireQualifiedAccess>]
 module Blob =
     let encode (content : byte array) : byte array = content

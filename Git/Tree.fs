@@ -3,6 +3,7 @@ namespace Git
 open System
 open System.IO
 open System.Text
+open Git.Internals
 
 type TreeEntry =
     {
@@ -10,6 +11,8 @@ type TreeEntry =
         Name : string
         Hash : Hash
     }
+    override this.ToString () =
+        sprintf "%i %s %O" this.Mode this.Name this.Hash
 
 [<RequireQualifiedAccess>]
 module Tree =
@@ -34,42 +37,17 @@ module Tree =
     /// decode as a tree object.
     let decode (b : byte array) : TreeEntry list =
         use b = new MemoryStream(b)
-        let consumeTo (stopAt : byte) : byte array option =
-            let rec consumeTo () : byte seq =
-                seq {
-                    let b = b.ReadByte ()
-                    if b < 0 then failwithf "Stream ended in the middle while consuming to '%i'." stopAt
-                    if b <> int stopAt then
-                        yield byte b
-                        yield! consumeTo ()
-                }
-
-            // Read the first one to see if we can
-            let firstByte = b.ReadByte ()
-            if firstByte < 0 then None else
-            seq {
-                yield byte firstByte
-                yield! consumeTo ()
-            }
-            |> Seq.toArray
-            |> Some
-
-        let consume (n : int) : byte array =
-            let output = Array.zeroCreate<byte> n
-            let total = b.Read (output, 0, n)
-            if total <> n then failwithf "Reached the end of the stream while consuming %i bytes" n
-            output
 
         let stripRow () : TreeEntry option =
-            let mode = consumeTo 32uy
+            let mode = Stream.consumeTo b 32uy
             match mode with
             | None -> None
             | Some mode ->
-            let name = consumeTo 0uy
+            let name = Stream.consumeTo b 0uy
             match name with
             | None -> failwith "Stream ended before we could consume a name"
             | Some name ->
-            let hash = consume 20
+            let hash = Stream.consume b 20
             {
                 Mode = mode |> Array.map char |> String |> Int32.Parse
                 Name = name |> Array.map char |> String

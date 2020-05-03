@@ -13,7 +13,7 @@ open Git
 module TestFromGitBook =
 
     [<Test>]
-    let ``Test ch 10.2 up to Commit`` () =
+    let ``Test ch 10.2, 10.3`` () =
         let fs = MockFileSystem ()
         let dir = fs.Path.GetTempFileName ()
         let versionDir = fs.DirectoryInfo.FromDirectoryName (dir + "_test")
@@ -312,3 +312,21 @@ module TestFromGitBook =
                "d8", "329fc1cc938780ffdd9f94e0d364e0ea74f579" // tree 1
                "fa", "49b077972391ad58037050f2a75f74e3671e92" // new.txt
            ]
+
+        // References
+
+        let refsDir = fs.Path.Combine (Repository.gitDir(repo).FullName, "refs") |> fs.DirectoryInfo.FromDirectoryName
+        refsDir.EnumerateDirectories ("*", SearchOption.AllDirectories)
+        |> Seq.map (fun i -> i.Name)
+        |> Seq.toList
+        |> List.sort
+        |> shouldEqual [
+            "heads"
+            "tags"
+        ]
+
+        Reference.write repo c3Hash "master"
+        |> shouldEqual { Was = None ; Now = c3Hash }
+
+        Reference.write repo c2Hash "test"
+        |> shouldEqual { Was = None ; Now = c2Hash }

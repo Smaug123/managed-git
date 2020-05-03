@@ -22,6 +22,9 @@ module Repository =
     let internal objectDir (r : Repository) : IDirectoryInfo =
         r.Fs.Path.Combine((gitDir r).FullName, "objects") |> r.Fs.DirectoryInfo.FromDirectoryName
 
+    let internal refDir (r : Repository) : IDirectoryInfo =
+        r.Fs.Path.Combine((gitDir r).FullName, "refs") |> r.Fs.DirectoryInfo.FromDirectoryName
+
     let internal createSubdir (r : IDirectoryInfo) (name : string) : IDirectoryInfo =
         let output =
             r.FileSystem.Path.Combine(r.FullName, name)

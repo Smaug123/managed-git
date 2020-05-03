@@ -7,7 +7,7 @@ open System
 open System.IO.Abstractions.TestingHelpers
 
 [<TestFixture>]
-module TestObject =
+module TestBlob =
     [<Test>]
     let ``Commit hash from Git Book`` () =
         let t = "what is up, doc?".ToCharArray () |> Array.map byte

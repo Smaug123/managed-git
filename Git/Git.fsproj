@@ -16,6 +16,8 @@
         <Compile Include="Commit.fs" />
         <Compile Include="Object.fs" />
         <Compile Include="EncodedObject.fs" />
+        <Compile Include="Reference.fs" />
+        <Compile Include="Commands\Log.fs" />
     </ItemGroup>
 
     <ItemGroup>

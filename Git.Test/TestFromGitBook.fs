@@ -325,8 +325,24 @@ module TestFromGitBook =
             "tags"
         ]
 
-        Reference.write repo c3Hash "master"
+        c3Hash
+        |> Reference.write repo "master"
         |> shouldEqual { Was = None ; Now = c3Hash }
 
-        Reference.write repo c2Hash "test"
+        Object.disambiguate repo "1513b1"
+        |> List.exactlyOne
+        |> Reference.write repo "test"
         |> shouldEqual { Was = None ; Now = c2Hash }
+
+        let exn = Assert.Throws<Exception> (fun () -> SymbolicReference.write repo SymbolicRef.Head "test")
+        exn.Message |> shouldEqual "refusing to point HEAD outside of refs/"
+
+        SymbolicReference.write repo SymbolicRef.Head "refs/heads/test"
+        repo.Fs.Path.Combine ((Repository.gitDir repo).FullName, "HEAD") |> repo.Fs.File.ReadAllText
+        |> shouldEqual "ref: refs/heads/test"
+
+        SymbolicReference.lookup repo SymbolicRef.Head
+        |> shouldEqual (Ok (SymbolicRefTarget "refs/heads/test"))
+
+        SymbolicReference.lookup repo SymbolicRef.FetchHead
+        |> shouldEqual (Error RefDidNotExist)

@@ -9,7 +9,7 @@ type ReferenceUpdate =
 
 [<RequireQualifiedAccess>]
 module Reference =
-    let write (r : Repository) (hash : Hash) (name : string) : ReferenceUpdate =
+    let write (r : Repository) (name : string) (hash : Hash) : ReferenceUpdate =
         let refFile = r.Fs.Path.Combine ((Repository.refDir r).FullName, "heads", name) |> r.Fs.FileInfo.FromFileName
         let was =
             if refFile.Exists then
@@ -27,3 +27,6 @@ module Reference =
             Now = hash
         }
 
+    let lookup (r : Repository) (name : string) : Hash option =
+        let refFile = r.Fs.Path.Combine ((Repository.refDir r).FullName, "heads", name) |> r.Fs.FileInfo.FromFileName
+        if refFile.Exists then Some (r.Fs.File.ReadAllText refFile.FullName |> Hash.ofString) else None

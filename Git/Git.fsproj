@@ -17,6 +17,7 @@
         <Compile Include="Object.fs" />
         <Compile Include="EncodedObject.fs" />
         <Compile Include="Reference.fs" />
+        <Compile Include="SymbolicReference.fs" />
         <Compile Include="Commands\Log.fs" />
     </ItemGroup>
 

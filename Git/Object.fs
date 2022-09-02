@@ -22,25 +22,25 @@ type Object =
 module Object =
     /// Get the object hashes which match this start.
     let disambiguate (r : Repository) (startOfHash : string) : Hash list =
+        let objectDir = Repository.objectDir r
+
         match startOfHash.Length with
-        | 0 -> (Repository.objectDir r).EnumerateFiles ("*", SearchOption.AllDirectories)
+        | 0 -> objectDir.EnumerateFiles ("*", SearchOption.AllDirectories)
         | 1 ->
             if r.IsCaseSensitive then
-                (Repository.objectDir r).EnumerateDirectories ("*", SearchOption.AllDirectories)
+                objectDir.EnumerateDirectories ("*", SearchOption.AllDirectories)
                 |> Seq.filter (fun dir -> dir.Name.[0] = startOfHash.[0])
                 |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
             else
-                (Repository.objectDir r)
-                    .EnumerateDirectories (
-                        sprintf "%c*" (Char.ToLowerInvariant startOfHash.[0]),
+                objectDir.EnumerateDirectories (
+                    sprintf "%c*" (Char.ToLowerInvariant startOfHash.[0]),
+                    SearchOption.AllDirectories
+                )
+                |> Seq.append (
+                    objectDir.EnumerateDirectories (
+                        sprintf "%c*" (Char.ToUpperInvariant startOfHash.[0]),
                         SearchOption.AllDirectories
                     )
-                |> Seq.append (
-                    (Repository.objectDir r)
-                        .EnumerateDirectories (
-                            sprintf "%c*" (Char.ToUpperInvariant startOfHash.[0]),
-                            SearchOption.AllDirectories
-                        )
                 )
                 |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
         | 2 ->
@@ -57,12 +57,16 @@ module Object =
             let suffix = startOfHash.Substring (2, startOfHash.Length - 2)
 
             let subDir =
-                r.Fs.Path.Combine ((Repository.objectDir r).FullName, prefix)
+                r.Fs.Path.Combine (objectDir.FullName, prefix)
                 |> r.Fs.DirectoryInfo.FromDirectoryName
 
             if subDir.Exists then
-                subDir.EnumerateFiles ()
-                |> Seq.filter (fun i -> i.Name.StartsWith suffix)
+                if r.IsCaseSensitive then
+                    subDir.EnumerateFiles ()
+                    |> Seq.filter (fun i -> i.Name.StartsWith suffix)
+                else
+                    subDir.EnumerateFiles ()
+                    |> Seq.filter (fun i -> i.Name.StartsWith (suffix, true, null))
             else
                 Seq.empty
 

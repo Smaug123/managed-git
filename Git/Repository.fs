@@ -45,7 +45,10 @@ module Repository =
         if dir.Exists && fs.Directory.Exists gitPath then
             {
                 Directory = dir
-                IsCaseSensitive = not (fs.Directory.Exists (gitPath.ToUpperInvariant ()))
+                IsCaseSensitive =
+                    // Yes, if someone's made both `.git` and `.GIT` then we may think
+                    // the filesystem is case insensitive.
+                    not (fs.Directory.Exists (gitPath.ToUpperInvariant ()))
             }
             |> Some
         else

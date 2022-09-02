@@ -1,6 +1,5 @@
 namespace Git
 
-open System
 open System.IO
 
 type Object =
@@ -32,16 +31,7 @@ module Object =
                 |> Seq.filter (fun dir -> dir.Name.[0] = startOfHash.[0])
                 |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
             else
-                objectDir.EnumerateDirectories (
-                    sprintf "%c*" (Char.ToLowerInvariant startOfHash.[0]),
-                    SearchOption.AllDirectories
-                )
-                |> Seq.append (
-                    objectDir.EnumerateDirectories (
-                        sprintf "%c*" (Char.ToUpperInvariant startOfHash.[0]),
-                        SearchOption.AllDirectories
-                    )
-                )
+                objectDir.EnumerateDirectories (sprintf "%c*" startOfHash.[0], SearchOption.AllDirectories)
                 |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
         | 2 ->
             let subDir =
@@ -54,7 +44,7 @@ module Object =
                 Seq.empty
         | _ ->
             let prefix = startOfHash.Substring (0, 2)
-            let suffix = startOfHash.Substring (2, startOfHash.Length - 2)
+            let suffix = startOfHash.Substring 2
 
             let subDir =
                 r.Fs.Path.Combine (objectDir.FullName, prefix)

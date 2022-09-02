@@ -2,6 +2,7 @@ namespace Git.Test
 
 open System
 open System.IO.Abstractions.TestingHelpers
+open System.Runtime.InteropServices
 open System.Text
 open NUnit.Framework
 open FsUnitTyped
@@ -59,12 +60,17 @@ module TestObject =
         h |> shouldEqual (Hash.ofString expected)
 
         let property (prefix : string) : bool =
-            if expected.StartsWith prefix then
+            let isMatch =
+                if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+                    // Windows filesystem is case-insensitive
+                    expected.StartsWith (prefix, StringComparison.InvariantCultureIgnoreCase)
+                else
+                    expected.StartsWith prefix
+
+            if isMatch then
                 Object.disambiguate repo prefix = [ expectedHash ]
             else
                 Object.disambiguate repo prefix = []
-
-        property "D6" |> shouldEqual true
 
         property
         |> Prop.forAll (Arb.fromGen (hashPrefixGenerator 40uy))

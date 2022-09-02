@@ -18,40 +18,22 @@ module TestObject =
             (byte i - 10uy + byte (if upper then 'A' else 'a'))
         |> char
 
+    let private boolGen : Gen<bool> = Gen.choose (0, 1) |> Gen.map ((=) 1)
+
     let hashPrefixGenerator (len : byte) =
         gen {
-            let! n = Gen.choose (0, int len)
-            let! c = Gen.listOfLength n (Gen.zip (Gen.choose (0, 15)) (Gen.choose (0, 1) |> Gen.map (fun i -> i = 0)))
+            let! prefixLength = Gen.choose (0, int len)
 
-            let ans =
-                c
-                |> List.map (fun (i, u) -> intToChar i u)
-                |> Array.ofList
+            let! hash =
+                gen {
+                    let! isUpper = boolGen
+                    let! hexDigit = Gen.choose (0, 15)
+                    return intToChar hexDigit isUpper
+                }
+                |> Gen.listOfLength prefixLength
 
-            return String ans
+            return String (Array.ofList hash)
         }
-
-    let prefixesOf (s : string) : Gen<string> =
-        Gen.choose (0, s.Length)
-        |> Gen.map (fun i -> s.Substring (0, i))
-
-    [<Test>]
-    let ``prefixesOf generates prefixes`` () =
-        let property (s1 : string, pref : string) = s1.StartsWith pref
-
-        let gen =
-            gen {
-                let! s =
-                    Arb.Default.String().Generator
-                    |> Gen.filter (fun i -> not <| Object.ReferenceEquals (i, null))
-
-                let! pref = prefixesOf s
-                return (s, pref)
-            }
-
-        property
-        |> Prop.forAll (Arb.fromGen gen)
-        |> Check.QuickThrowOnFailure
 
     [<Test>]
     let ``Can look up a partial hash`` () =
@@ -82,10 +64,12 @@ module TestObject =
             else
                 Object.disambiguate repo prefix = []
 
+        property "D6" |> shouldEqual true
+
         property
         |> Prop.forAll (Arb.fromGen (hashPrefixGenerator 40uy))
         |> Check.QuickThrowOnFailure
 
-        property
-        |> Prop.forAll (Arb.fromGen (prefixesOf expected))
-        |> Check.QuickThrowOnFailure
+        for subStringEnd in 0 .. expected.Length - 1 do
+            property expected.[0..subStringEnd]
+            |> shouldEqual true

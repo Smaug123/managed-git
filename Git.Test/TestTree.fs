@@ -39,26 +39,25 @@ module TestTree =
                     Mode = 40000
                 }
             ]
-        let b =
-            Object.Tree t
-            |> EncodedObject.encode
+
+        let b = Object.Tree t |> EncodedObject.encode
 
         let fs = MockFileSystem ()
         let dir = fs.Path.GetTempFileName ()
         let gitDir = fs.DirectoryInfo.FromDirectoryName (dir + "_test")
-        gitDir.Create()
+        gitDir.Create ()
 
-        let repo = match Repository.init gitDir with | Ok r -> r | Error e -> failwithf "Oh no: %+A" e
+        let repo =
+            match Repository.init gitDir with
+            | Ok r -> r
+            | Error e -> failwithf "Oh no: %+A" e
 
-        b
-        |> EncodedObject.write repo
-        |> ignore
+        b |> EncodedObject.write repo |> ignore
 
         let backIn =
             EncodedObject.catFile repo (EncodedObject.hash b)
             |> EncodedObject.decode
+
         match backIn with
-        | Object.Tree entries ->
-            entries
-            |> shouldEqual t
+        | Object.Tree entries -> entries |> shouldEqual t
         | _ -> failwithf "Oh no: %+A" backIn

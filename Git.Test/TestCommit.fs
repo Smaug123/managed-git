@@ -14,9 +14,12 @@ module TestCommit =
         let fs = MockFileSystem ()
         let dir = fs.Path.GetTempFileName ()
         let versionDir = fs.DirectoryInfo.FromDirectoryName (dir + "_test")
-        versionDir.Create()
+        versionDir.Create ()
 
-        let repo = match Repository.init versionDir with | Ok r -> r | Error e -> failwithf "Oh no: %+A" e
+        let repo =
+            match Repository.init versionDir with
+            | Ok r -> r
+            | Error e -> failwithf "Oh no: %+A" e
 
         let scott =
             {
@@ -31,7 +34,7 @@ module TestCommit =
                 Committer = scott
                 Author = scott
                 CommitMessage = "First commit\n"
-                Parents = [Hash.ofString "c7929fc1cc938780ffdd9f94e0d364e0ea74f210"]
+                Parents = [ Hash.ofString "c7929fc1cc938780ffdd9f94e0d364e0ea74f210" ]
                 Tree = Hash.ofString "d8329fc1cc938780ffdd9f94e0d364e0ea74f579"
             }
             |> Object.Commit

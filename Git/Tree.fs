@@ -1,6 +1,7 @@
 namespace Git
 
 open System
+open System.Collections.Generic
 open System.IO
 open System.Text
 open Git.Internals
@@ -19,21 +20,19 @@ type TreeEntry =
 module Tree =
 
     /// emits a byte array because the header needs to know a length
-    let encode (tree : TreeEntry list) : byte[] =
+    let encode (tree : TreeEntry list) : byte array =
         // This is a bit odd, we should probably emit the stream in a streamy way
         // rather than constructing the whole thing
-        let b = StringBuilder ()
+        let b = ResizeArray ()
 
         for t in tree do
-            b.Append (sprintf "%i %s%c" t.Mode t.Name (char 0))
-            |> ignore
+            b.AddRange (Encoding.ASCII.GetBytes (sprintf "%i %s" t.Mode t.Name))
+            b.Add 0uy
 
             let (Hash h) = t.Hash
-            let hashStr = String (h |> List.toArray |> Array.map char)
-            b.Append hashStr |> ignore
+            b.AddRange h
 
-        // TODO assumption that may not be true of Git: file names are actually strings and are stored as UTF8
-        b.ToString () |> Encoding.UTF8.GetBytes
+        b.ToArray ()
 
     /// Given a stream seeked to the point where we should start consuming,
     /// decode as a tree object.

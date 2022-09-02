@@ -97,9 +97,9 @@ module EncodedObject =
         let hash = hash o
         let hashStr = Hash.toString hash
         let objectName = hashStr.[2..]
-        let subdir = hashStr.[0..1]
+        let subDir = hashStr.[0..1]
 
-        let d = Repository.createSubdir (Repository.objectDir r) subdir
+        let d = Repository.createSubdir (Repository.objectDir r) subDir
         use filestream = r.Fs.File.Create (r.Fs.Path.Combine (d.FullName, objectName))
 
         compress o filestream
@@ -109,10 +109,10 @@ module EncodedObject =
     let catFile (r : Repository) (hash : Hash) : EncodedObject =
         let hash = hash |> Hash.toString
         let objectName = hash.[2..]
-        let subdir = hash.[0..1]
+        let subDir = hash.[0..1]
 
         use filestream =
-            r.Fs.Path.Combine ((Repository.objectDir r).FullName, subdir, objectName)
+            r.Fs.Path.Combine ((Repository.objectDir r).FullName, subDir, objectName)
             |> r.Fs.File.OpenRead
 
         uncompress filestream

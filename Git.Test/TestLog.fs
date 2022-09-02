@@ -14,9 +14,12 @@ module TestLog =
         let fs = MockFileSystem ()
         let dir = fs.Path.GetTempFileName ()
         let versionDir = fs.DirectoryInfo.FromDirectoryName (dir + "_test")
-        versionDir.Create()
+        versionDir.Create ()
 
-        let repo = match Repository.init versionDir with | Ok r -> r | Error e -> failwithf "Oh no: %+A" e
+        let repo =
+            match Repository.init versionDir with
+            | Ok r -> r
+            | Error e -> failwithf "Oh no: %+A" e
 
         let commits = Utils.gitBookSetup repo
 

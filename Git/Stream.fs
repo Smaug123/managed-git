@@ -12,7 +12,10 @@ module internal Stream =
         let rec consumeTo () : byte seq =
             seq {
                 let b = b.ReadByte ()
-                if b < 0 then failwithf "Stream ended in the middle while consuming to '%i'." stopAt
+
+                if b < 0 then
+                    failwithf "Stream ended in the middle while consuming to '%i'." stopAt
+
                 if b <> int stopAt then
                     yield byte b
                     yield! consumeTo ()
@@ -20,26 +23,34 @@ module internal Stream =
 
         // Read the first one to see if we can
         let firstByte = b.ReadByte ()
-        if firstByte < 0 then None else
 
-        let firstByte = byte firstByte
-        if firstByte = stopAt then Array.empty |> Some
+        if firstByte < 0 then
+            None
         else
-            seq {
-                yield firstByte
-                yield! consumeTo ()
-            }
-            |> Seq.toArray
-            |> Some
+
+            let firstByte = byte firstByte
+
+            if firstByte = stopAt then
+                Array.empty |> Some
+            else
+                seq {
+                    yield firstByte
+                    yield! consumeTo ()
+                }
+                |> Seq.toArray
+                |> Some
 
     /// Consume the first n bytes of the stream. Throw if the stream runs out first.
     let consume (b : Stream) (n : int) : byte array =
         let output = Array.zeroCreate<byte> n
         let total = b.Read (output, 0, n)
-        if total <> n then failwithf "Reached the end of the stream while consuming %i bytes" n
+
+        if total <> n then
+            failwithf "Reached the end of the stream while consuming %i bytes" n
+
         output
 
-    let consumeToEnd (b : MemoryStream)  : byte array =
-        use newMs = new MemoryStream()
-        b.CopyTo(newMs)
+    let consumeToEnd (b : MemoryStream) : byte array =
+        use newMs = new MemoryStream ()
+        b.CopyTo (newMs)
         newMs.ToArray ()

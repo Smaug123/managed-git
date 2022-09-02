@@ -2,6 +2,7 @@ namespace Git
 
 open System
 open System.IO
+open System.Text
 open Microsoft.FSharp.Data.UnitSystems.SI.UnitNames
 open Git.Internals
 
@@ -77,8 +78,8 @@ module Commit =
             yield sprintf "\n%s" content.CommitMessage
         }
         |> String.concat "\n"
-        |> fun s -> s.ToCharArray ()
-        |> Array.map byte
+        // TODO: assumption that may not be compatible with Git: UTF8 is used for names, emails etc
+        |> Encoding.UTF8.GetBytes
 
     let private parseInt (chars : byte array) =
         let rec acc (i : int) (soFar : int) =

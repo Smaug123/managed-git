@@ -3,6 +3,7 @@ namespace Git.Test
 open System
 open System.IO
 open System.IO.Abstractions.TestingHelpers
+open System.Text
 open NUnit.Framework
 open FsUnitTyped
 open Microsoft.FSharp.Data.UnitSystems.SI.UnitNames
@@ -40,8 +41,8 @@ module TestFromGitBook =
 
         // Write our first object
         let h =
-            "test content\n".ToCharArray ()
-            |> Array.map byte
+            "test content\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo
@@ -70,8 +71,8 @@ module TestFromGitBook =
         // Version control
         // TODO - add helper methods for dealing with file contents
         let h1 =
-            "version 1\n".ToCharArray ()
-            |> Array.map byte
+            "version 1\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo
@@ -80,8 +81,8 @@ module TestFromGitBook =
         |> shouldEqual (Hash.ofString "83baae61804e65cc73a7201a7252750c76066a30")
 
         let h2 =
-            "version 2\n".ToCharArray ()
-            |> Array.map byte
+            "version 2\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo
@@ -154,8 +155,8 @@ module TestFromGitBook =
         | s -> failwithf "Oh no: +%A" s
 
         let newHash =
-            "new file\n".ToCharArray ()
-            |> Array.map byte
+            "new file\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo

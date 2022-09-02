@@ -1,5 +1,6 @@
 namespace Git.Test
 
+open System.Text
 open Git
 open FsUnitTyped
 open Microsoft.FSharp.Data.UnitSystems.SI.UnitNames
@@ -9,8 +10,8 @@ module Utils =
 
     let gitBookSetup (repo : Repository) : Map<Hash, CommitEntry> =
         let h1 =
-            "version 1\n".ToCharArray ()
-            |> Array.map byte
+            "version 1\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo
@@ -19,8 +20,8 @@ module Utils =
         |> shouldEqual (Hash.ofString "83baae61804e65cc73a7201a7252750c76066a30")
 
         let h2 =
-            "version 2\n".ToCharArray ()
-            |> Array.map byte
+            "version 2\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo
@@ -45,8 +46,8 @@ module Utils =
         |> shouldEqual (Hash.ofString "d8329fc1cc938780ffdd9f94e0d364e0ea74f579")
 
         let newHash =
-            "new file\n".ToCharArray ()
-            |> Array.map byte
+            "new file\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo

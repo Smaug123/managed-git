@@ -1,8 +1,8 @@
 namespace Git.Test
 
 open System
-open System.Collections.Generic
 open System.IO.Abstractions.TestingHelpers
+open System.Text
 open NUnit.Framework
 open FsUnitTyped
 open FsCheck
@@ -66,8 +66,8 @@ module TestObject =
             | Error e -> failwithf "Oh no: %+A" e
 
         let h =
-            "test content\n".ToCharArray ()
-            |> Array.map byte
+            "test content\n"
+            |> Encoding.ASCII.GetBytes
             |> Object.Blob
             |> EncodedObject.encode
             |> EncodedObject.write repo

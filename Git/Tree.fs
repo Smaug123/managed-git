@@ -30,9 +30,10 @@ module Tree =
 
             let (Hash h) = t.Hash
             let hashStr = String (h |> List.toArray |> Array.map char)
-            b.Append (hashStr) |> ignore
+            b.Append hashStr |> ignore
 
-        b.ToString().ToCharArray () |> Array.map byte
+        // TODO assumption that may not be true of Git: file names are actually strings and are stored as UTF8
+        b.ToString () |> Encoding.UTF8.GetBytes
 
     /// Given a stream seeked to the point where we should start consuming,
     /// decode as a tree object.

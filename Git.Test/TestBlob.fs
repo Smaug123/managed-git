@@ -4,15 +4,14 @@ open Git
 open NUnit.Framework
 open FsUnitTyped
 open System
+open System.Text
 open System.IO.Abstractions.TestingHelpers
 
 [<TestFixture>]
 module TestBlob =
     [<Test>]
     let ``Commit hash from Git Book`` () =
-        let t =
-            "what is up, doc?".ToCharArray ()
-            |> Array.map byte
+        let t = Encoding.ASCII.GetBytes "what is up, doc?"
 
         Object.Blob t
         |> EncodedObject.encode
@@ -22,9 +21,7 @@ module TestBlob =
 
     [<Test>]
     let ``Write the commit hash to a file`` () =
-        let t =
-            "what is up, doc?".ToCharArray ()
-            |> Array.map byte
+        let t = Encoding.ASCII.GetBytes "what is up, doc?"
 
         let b = Object.Blob t |> EncodedObject.encode
 

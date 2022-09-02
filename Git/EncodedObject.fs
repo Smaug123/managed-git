@@ -63,7 +63,7 @@ module EncodedObject =
             // stop reading the header at the 0 byte
             }
 
-        match bytes () |> Seq.toArray |> Header.ofBytes with
+        match bytes () |> Seq.toArray |> Header.ofAsciiBytes with
         | None -> failwith "malformed header"
         | Some b -> b
 

@@ -1,7 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
     </PropertyGroup>
 
     <ItemGroup>
@@ -22,8 +23,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Ionic.Zlib" Version="1.9.1.5" />
       <PackageReference Include="System.IO.Abstractions" Version="11.0.4" />
+      <PackageReference Include="FSharp.Core" Version="4.3.4" />
     </ItemGroup>
 
 </Project>

@@ -35,15 +35,16 @@ type CommitEntry =
 // TODO - implement signed commits too
 [<RequireQualifiedAccess>]
 module Commit =
+
+    let private assertValid (context : string) (s : string) : unit =
+        if s.IndexOfAny [| '<' ; '\n' |] > 0 then
+            failwithf "%s '%s' contains forbidden character" context s
+
     let encode (content : CommitEntry) : byte array =
-        if content.Author.Name.Contains '<' || content.Author.Name.Contains '\n' then
-            failwithf "Author name '%s' contains forbidden character" content.Author.Name
-        if content.Committer.Name.Contains '<' || content.Committer.Name.Contains '\n' then
-            failwithf "Committer name '%s' contains forbidden character" content.Committer.Name
-        if content.Author.Email.Contains '>' || content.Author.Email.Contains '\n' then
-            failwithf "Author email '%s' contains forbidden character" content.Author.Email
-        if content.Committer.Email.Contains '>' || content.Committer.Email.Contains '\n' then
-            failwithf "Committer email '%s' contains forbidden character" content.Committer.Email
+        assertValid "Author name" content.Author.Name
+        assertValid "Committer name" content.Committer.Name
+        assertValid "Author email" content.Author.Email
+        assertValid "Committer email" content.Committer.Email
         seq {
             yield sprintf "tree %s" (Hash.toString content.Tree)
             yield! content.Parents |> List.map (Hash.toString >> sprintf "parent %s") |> Array.ofList

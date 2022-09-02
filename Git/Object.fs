@@ -28,7 +28,7 @@ module Object =
             (Repository.objectDir r).EnumerateFiles("*", SearchOption.AllDirectories)
         | 1 ->
             (Repository.objectDir r).EnumerateFiles("*", SearchOption.AllDirectories)
-            |> Seq.filter (fun i -> i.Directory.Name.StartsWith startOfHash.[0])
+            |> Seq.filter (fun i -> i.Directory.Name.Length > 0 && i.Directory.Name.[0] = startOfHash.[0])
         | 2 ->
             let subDir =
                 r.Fs.Path.Combine ((Repository.objectDir r).FullName, startOfHash)

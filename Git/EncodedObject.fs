@@ -1,8 +1,8 @@
 namespace Git
 
 open System.IO
+open System.IO.Compression
 open System.Security.Cryptography
-open Ionic.Zlib
 
 type EncodedObject =
     {
@@ -56,7 +56,7 @@ module EncodedObject =
             |> Array.concat
 
         use ms = new MemoryStream(toWrite)
-        use ds = new Ionic.Zlib.ZlibStream(dest, CompressionMode.Compress, CompressionLevel.Level0)
+        use ds = new DeflateStream (dest, CompressionMode.Compress)
         ms.CopyTo ds
 
     /// Read the header of the stream seeked to the beginning of the content.
@@ -78,7 +78,7 @@ module EncodedObject =
 
     let private uncompress (s : Stream) : EncodedObject =
         use ms = new MemoryStream ()
-        use ds = new Ionic.Zlib.ZlibStream(s, CompressionMode.Decompress)
+        use ds = new DeflateStream(s, CompressionMode.Decompress)
         ds.CopyTo ms
         ms.Seek(0L, SeekOrigin.Begin) |> ignore
 

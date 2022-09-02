@@ -24,11 +24,14 @@ module Object =
         match startOfHash.Length with
         | 0 -> (Repository.objectDir r).EnumerateFiles ("*", SearchOption.AllDirectories)
         | 1 ->
-            (Repository.objectDir r).EnumerateFiles ("*", SearchOption.AllDirectories)
-            |> Seq.filter (fun i ->
-                i.Directory.Name.Length > 0
-                && i.Directory.Name.[0] = startOfHash.[0]
-            )
+            if r.IsCaseSensitive then
+                (Repository.objectDir r).EnumerateDirectories ("*", SearchOption.AllDirectories)
+                |> Seq.filter (fun dir -> dir.Name.[0] = startOfHash.[0])
+                |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
+            else
+                (Repository.objectDir r)
+                    .EnumerateDirectories (sprintf "%c*" startOfHash.[0], SearchOption.AllDirectories)
+                |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
         | 2 ->
             let subDir =
                 r.Fs.Path.Combine ((Repository.objectDir r).FullName, startOfHash)

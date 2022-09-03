@@ -35,7 +35,7 @@ module Object =
                 |> Seq.collect (fun dir -> dir.EnumerateFiles "*")
         | 2 ->
             let subDir =
-                r.Fs.Path.Combine ((Repository.objectDir r).FullName, startOfHash)
+                r.Fs.Path.Combine (objectDir.FullName, startOfHash)
                 |> r.Fs.DirectoryInfo.FromDirectoryName
 
             if subDir.Exists then

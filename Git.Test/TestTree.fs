@@ -48,7 +48,7 @@ module TestTree =
         gitDir.Create ()
 
         let repo =
-            match Repository.init gitDir with
+            match Repository.init (BranchName "main") gitDir with
             | Ok r -> r
             | Error e -> failwithf "Oh no: %+A" e
 

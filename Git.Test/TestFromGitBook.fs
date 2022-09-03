@@ -21,7 +21,7 @@ module TestFromGitBook =
         versionDir.Create ()
 
         let repo =
-            match Repository.init versionDir with
+            match Repository.init (BranchName "main") versionDir with
             | Ok r -> r
             | Error e -> failwithf "Oh no: %+A" e
 

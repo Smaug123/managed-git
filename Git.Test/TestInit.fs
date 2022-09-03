@@ -15,15 +15,15 @@ module TestInit =
         let dir = fs.Path.GetTempFileName ()
         let gitDir = fs.DirectoryInfo.FromDirectoryName (dir + "_test")
 
-        Repository.init gitDir
+        Repository.init (BranchName "main") gitDir
         |> shouldEqual (Error DirectoryDoesNotExist)
 
         gitDir.Create ()
 
         let _ =
-            match Repository.init gitDir with
+            match Repository.init (BranchName "main") gitDir with
             | Ok r -> r
             | Error r -> failwithf "Failed to init repo: %+A" r
 
-        Repository.init gitDir
+        Repository.init (BranchName "main") gitDir
         |> shouldEqual (Error AlreadyGit)

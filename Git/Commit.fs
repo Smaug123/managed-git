@@ -120,7 +120,7 @@ module Commit =
             | Some hash -> hash |> Hash.ofSpelling
 
         let consumeLabelledHash (expecting : OneOf) : string * Hash =
-            let w = consumeWord (expecting)
+            let w = consumeWord expecting
             let h = consumeHash w
             w, h
 

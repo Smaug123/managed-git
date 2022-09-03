@@ -12,7 +12,7 @@ type SymbolicRef =
     | MergeHead
     | Head
     | OrigHead
-    // TODO - determine how an arbitrary symbolicref actually behaves
+    // TODO - determine how an arbitrary symbolic ref actually behaves
     | Verbatim of string
 
     override this.ToString () : string =

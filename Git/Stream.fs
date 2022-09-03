@@ -52,5 +52,5 @@ module internal Stream =
 
     let consumeToEnd (b : MemoryStream) : byte array =
         use newMs = new MemoryStream ()
-        b.CopyTo (newMs)
+        b.CopyTo newMs
         newMs.ToArray ()

@@ -20,4 +20,3 @@ type Contributor =
 
     override this.ToString () =
         sprintf "%s <%s> %i %s" this.Name this.Email this.Date this.DateTimezone
-

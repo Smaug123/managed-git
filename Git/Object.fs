@@ -17,8 +17,7 @@ type Object =
             |> String.concat "\n"
             |> sprintf "tree:\n%+A"
         | Commit c -> sprintf "commit:\n%O" c
-        | Tag t ->
-            sprintf "tag:\n%O" t
+        | Tag t -> sprintf "tag:\n%O" t
 
 [<RequireQualifiedAccess>]
 module Object =

@@ -40,7 +40,7 @@ type PackIndex =
 module PackFile =
 
     /// Returns the int, and the bytes read (for CRC32 purposes)
-    let private readSizeEncodedInt (s : Stream) : int64 * byte [] =
+    let private readSizeEncodedInt (s : Stream) : int64 * byte[] =
         let rec go (count : int) (bytes : ResizeArray<byte>) (ans : int64) =
             let b = s.ReadByte ()
 
@@ -49,7 +49,11 @@ module PackFile =
 
             let ans = ans + (int64 (b % 128) <<< (count * 7))
             bytes.Add (byte b)
-            if b >= 128 then go (count + 1) bytes ans else ans, bytes.ToArray ()
+
+            if b >= 128 then
+                go (count + 1) bytes ans
+            else
+                ans, bytes.ToArray ()
 
         go 0 (ResizeArray ()) 0L
 
@@ -117,11 +121,15 @@ module PackFile =
             match untilPos with
             | None ->
                 let finalObjectAndFooter = Stream.consumeToEnd s
-                finalObjectAndFooter.[0..finalObjectAndFooter.Length - 21], Some finalObjectAndFooter.[finalObjectAndFooter.Length - 20 ..]
+
+                finalObjectAndFooter.[0 .. finalObjectAndFooter.Length - 21],
+                Some finalObjectAndFooter.[finalObjectAndFooter.Length - 20 ..]
             | Some untilPos ->
                 let numToConsume = int (untilPos - s.Position)
+
                 if numToConsume < 0 then
                     failwith "Internal error: object too large for this implementation to consume"
+
                 Stream.consume s numToConsume, None
 
         // TODO - check CRCs, this is currently failing
@@ -134,6 +142,7 @@ module PackFile =
         use resultStream = new MemoryStream ()
         s.CopyTo resultStream
         let decompressedObject = resultStream.ToArray ()
+
         if decompressedObject.LongLength <> size then
             failwithf "Object had unexpected length. Expected: %i. Got: %i" size decompressedObject.LongLength
 
@@ -150,10 +159,8 @@ module PackFile =
                 Tree.decode decompressedObject
                 |> Object.Tree
                 |> PackObject.Object
-            | PackObjectType.ObjOfsDelta, Some preamble ->
-                PackObject.Delta preamble
-            | PackObjectType.ObjRefDelta, Some preamble ->
-                PackObject.Delta preamble
+            | PackObjectType.ObjOfsDelta, Some preamble -> PackObject.Delta preamble
+            | PackObjectType.ObjRefDelta, Some preamble -> PackObject.Delta preamble
             | PackObjectType.ObjTag, None ->
                 Tag.decode decompressedObject
                 |> Object.Tag
@@ -166,8 +173,8 @@ module PackFile =
             | PackObjectType.ObjRefDelta, None
             | PackObjectType.ObjOfsDelta, None ->
                 failwith "Logic error in this library, got no preamble for a delta type"
-            | _, _ ->
-                failwith "Unexpected object type"
+            | _, _ -> failwith "Unexpected object type"
+
         toRet, footer
 
     type private HeaderMetadata =
@@ -193,16 +200,21 @@ module PackFile =
         let objectNumBytes = Stream.consume s 4
         let numberOfObjects = toUint objectNumBytes
 
-        { Stream = s ; NumberOfObjects = numberOfObjects }
+        {
+            Stream = s
+            NumberOfObjects = numberOfObjects
+        }
 
     let readAll (file : IFileInfo) (index : PackIndex) =
-        let { Stream = stream ; NumberOfObjects = numberOfObjects } = readAndValidateHeader file
+        let {
+                Stream = stream
+                NumberOfObjects = numberOfObjects
+            } =
+            readAndValidateHeader file
+
         use stream = stream
 
-        let objectPositions =
-            index.Offsets
-            |> Array.map int64
-            |> Array.sort
+        let objectPositions = index.Offsets |> Array.map int64 |> Array.sort
 
         index.ObjectChecksums
         |> Array.map (fun crc ->
@@ -214,15 +226,17 @@ module PackFile =
             // Account for the case where the index file contains garbage
             let startingIndex =
                 match nextObjectIndex with
-                | None ->
-                    objectPositions.[objectPositions.Length - 1]
+                | None -> objectPositions.[objectPositions.Length - 1]
                 | Some 0 -> stream.Position
                 | Some i -> objectPositions.[i - 1]
 
             if startingIndex <> stream.Position then
-                stream.Seek (startingIndex, SeekOrigin.Begin) |> ignore
+                stream.Seek (startingIndex, SeekOrigin.Begin)
+                |> ignore
 
-            let nextObjectPosition = nextObjectIndex |> Option.map (fun i -> objectPositions.[i])
+            let nextObjectPosition =
+                nextObjectIndex
+                |> Option.map (fun i -> objectPositions.[i])
 
             parseObject nextObjectPosition crc stream
         )
@@ -270,9 +284,7 @@ module PackFile =
             |> Array.init totalObjectNumber
 
         let crc =
-            fun _ ->
-                Stream.consume s 4
-                |> toUint
+            fun _ -> Stream.consume s 4 |> toUint
             |> Array.init totalObjectNumber
 
         let offsets =

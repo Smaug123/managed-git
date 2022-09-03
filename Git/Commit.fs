@@ -101,16 +101,20 @@ module Commit =
         let gpgSignature =
             match trailingNewline with
             | None -> failwith "Commit object ended at end of committer"
-            | Some [||] ->
-                None
+            | Some [||] -> None
             | Some data when data.[0..6] = Encoding.ASCII.GetBytes "gpgsig " ->
                 let result = StringBuilder ()
-                result.Append (Encoding.ASCII.GetString data.[7..]) |> ignore
+
+                result.Append (Encoding.ASCII.GetString data.[7..])
+                |> ignore
+
                 result.Append '-' |> ignore
+
                 let remaining =
                     match Stream.consumeTo ms (byte '-') with
                     | None -> failwith "GPG signature unexpectedly did not terminate in '-' character"
                     | Some s -> Encoding.ASCII.GetString s
+
                 result.Append remaining |> ignore
 
                 let trailer =
@@ -119,12 +123,8 @@ module Commit =
                     | Some s -> Encoding.ASCII.GetString s
 
                 result.Append trailer |> ignore
-                result.ToString ()
-                |> Some
-            | Some data ->
-                failwithf
-                    "Unexpected trailer to committer, got %s"
-                    (Encoding.UTF8.GetString data)
+                result.ToString () |> Some
+            | Some data -> failwithf "Unexpected trailer to committer, got %s" (Encoding.UTF8.GetString data)
 
         let message = Stream.consumeToEnd ms |> Encoding.UTF8.GetString
         //if message.[message.Length - 1] <> '\n' then

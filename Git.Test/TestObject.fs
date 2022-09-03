@@ -79,3 +79,7 @@ module TestObject =
         for subStringEnd in 0 .. expected.Length - 1 do
             property expected.[0..subStringEnd]
             |> shouldEqual true
+
+            expected.[0..subStringEnd].ToUpperInvariant ()
+            |> property
+            |> shouldEqual true

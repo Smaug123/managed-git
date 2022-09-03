@@ -7,6 +7,7 @@ type Repository =
     private
         {
             Directory : IDirectoryInfo
+            IsCaseSensitive : bool
         }
 
     member this.Fs = this.Directory.FileSystem
@@ -38,34 +39,37 @@ module Repository =
         output
 
     let make (dir : IDirectoryInfo) : Repository option =
-        if
-            dir.Exists
-            && dir.EnumerateDirectories ()
-               |> Seq.map (fun i -> i.Name)
-               |> Seq.contains ".git"
-        then
-            Some { Directory = dir }
+        let fs = dir.FileSystem
+        let gitPath = fs.Path.Combine (dir.FullName, ".git")
+
+        if dir.Exists && fs.Directory.Exists gitPath then
+            {
+                Directory = dir
+                IsCaseSensitive =
+                    // Yes, if someone's made both `.git` and `.GIT` then we may think
+                    // the filesystem is case insensitive.
+                    not (fs.Directory.Exists (gitPath.ToUpperInvariant ()))
+            }
+            |> Some
         else
             None
 
     let init (dir : IDirectoryInfo) : Result<Repository, InitFailure> =
+        match make dir with
+        | Some _ -> Error AlreadyGit
+        | None ->
+
         if not dir.Exists then
             Error DirectoryDoesNotExist
-        elif
-            not
-            <| Seq.isEmpty (dir.EnumerateDirectories ".git")
-        then
-            Error AlreadyGit
         else
 
-        let r = { Directory = dir }
-
+        // TODO do this atomically
         let gitDir = createSubdir dir ".git"
         let objectDir = createSubdir gitDir "objects"
-        let packDir = createSubdir objectDir "pack"
-        let infoDir = createSubdir objectDir "info"
+        let _packDir = createSubdir objectDir "pack"
+        let _infoDir = createSubdir objectDir "info"
         let refsDir = createSubdir gitDir "refs"
-        let headsDir = createSubdir refsDir "heads"
-        let tagsDir = createSubdir refsDir "tags"
+        let _headsDir = createSubdir refsDir "heads"
+        let _tagsDir = createSubdir refsDir "tags"
 
-        r |> Ok
+        make dir |> Option.get |> Ok

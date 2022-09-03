@@ -1,6 +1,5 @@
 namespace Git
 
-open System
 open System.IO
 open System.Text
 open Git.Internals
@@ -26,7 +25,6 @@ type CommitEntry =
             this.Committer
             this.CommitMessage
 
-// TODO - implement signed commits too
 [<RequireQualifiedAccess>]
 module Commit =
 
@@ -127,9 +125,6 @@ module Commit =
             | Some data -> failwithf "Unexpected trailer to committer, got %s" (Encoding.UTF8.GetString data)
 
         let message = Stream.consumeToEnd ms |> Encoding.UTF8.GetString
-        //if message.[message.Length - 1] <> '\n' then
-        //    failwithf "Expected commit message to end with newline, got '%c':\n%s" message.[message.Length - 1] message
-        //let message = message.Substring(0, message.Length - 1)
 
         {
             Committer = committer

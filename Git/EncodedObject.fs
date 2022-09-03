@@ -35,6 +35,7 @@ module EncodedObject =
         | Header.Tree _ -> Tree.decode e.Content |> Object.Tree
         | Header.Blob _ -> Blob.decode e.Content |> Object.Blob
         | Header.Commit _ -> Commit.decode e.Content |> Object.Commit
+        | Header.Tag _ -> Tag.decode e.Content |> Object.Tag
 
     let hash (o : EncodedObject) : Hash =
         use hasher = SHA1.Create ()
@@ -83,6 +84,7 @@ module EncodedObject =
             | Header.Blob i -> i
             | Header.Tree i -> i
             | Header.Commit i -> i
+            | Header.Tag i -> i
 
         let result =
             {

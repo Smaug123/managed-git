@@ -5,23 +5,24 @@ open System.Globalization
 open System.Text
 
 type Hash =
-    | Hash of byte list
+    private
+    | Hash of byte array
 
     override this.ToString () =
         match this with
         | Hash h ->
 
-        let t = StringBuilder (List.length h * 2)
+        let t = StringBuilder (h.Length * 2)
 
-        h
-        |> List.iter (fun b -> t.AppendFormat ("{0:x2}", b) |> ignore)
+        for b in h do
+            t.AppendFormat ("{0:x2}", b) |> ignore
 
         t.ToString ()
 
 [<RequireQualifiedAccess>]
 module Hash =
 
-    let ofBytes s = s |> Seq.toList |> Hash
+    let ofBytes (s : byte array) = s |> Hash
 
     let ofString (s : string) : Hash =
         let rec b (pos : int) =
@@ -31,7 +32,7 @@ module Hash =
                     yield! b (pos + 2)
             }
 
-        b 0 |> ofBytes
+        b 0 |> Seq.toArray |> ofBytes
 
     // Given a byte array of *characters* spelling out e.g. 'b' 'd' '6' '3', return the hash this is spelling out.
     let ofSpelling (input : byte array) : Hash =
@@ -54,6 +55,10 @@ module Hash =
                     yield! b (pos + 2)
             }
 
-        b 0 |> ofBytes
+        fun i ->
+            value input.[2 * i] * 16uy
+            + value input.[2 * i + 1]
+        |> Array.init (input.Length / 2)
+        |> ofBytes
 
     let toString (h : Hash) : string = h.ToString ()

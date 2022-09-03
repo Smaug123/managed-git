@@ -84,6 +84,7 @@ module PackFile =
         | Delta of Preamble
 
     /// If this was the last object, i.e. if untilPos was None, returns the 20-byte footer.
+    /// TODO fix up the domain so that the None case is a separate function
     let private parseObject (untilPos : int64 option) (expectedCrc : uint32) (s : Stream) : PackObject * byte[] option =
         let firstByte = s.ReadByte ()
 
@@ -206,20 +207,17 @@ module PackFile =
         }
 
     let readAll (file : IFileInfo) (index : PackIndex) =
-        let {
-                Stream = stream
-                NumberOfObjects = numberOfObjects
-            } =
-            readAndValidateHeader file
+        let header = readAndValidateHeader file
 
-        use stream = stream
+        use stream = header.Stream
 
         let objectPositions = index.Offsets |> Array.map int64 |> Array.sort
 
         index.ObjectChecksums
         |> Array.map (fun crc ->
             let nextObjectIndex =
-                // TODO probably binary search this
+                // TODO probably binary search this, or maintain an incrementing
+                // counter
                 objectPositions
                 |> Array.tryFindIndex (fun pos -> pos > stream.Position)
 
@@ -240,6 +238,57 @@ module PackFile =
 
             parseObject nextObjectPosition crc stream
         )
+
+    type private Compare =
+        | Less
+        | Greater
+        | Equal
+
+    let private binarySearch<'chop, 'a>
+        (get : 'chop -> 'a)
+        (compare : 'a -> 'a -> Compare)
+        (mean : 'chop -> 'chop -> 'chop)
+        (needle : 'a)
+        : 'chop -> 'chop -> 'chop option
+        =
+        let rec go (startPoint : 'chop) (endPoint : 'chop) =
+            let start = get startPoint
+
+            match compare start (get endPoint) with
+            | Compare.Greater -> None
+            | Compare.Equal ->
+                if compare start needle = Compare.Equal then
+                    Some startPoint
+                else
+                    None
+            | Compare.Less ->
+
+            let mean = mean startPoint endPoint
+
+            match compare (get mean) needle with
+            | Compare.Equal -> Some mean
+            | Compare.Greater -> go startPoint mean
+            | Compare.Less -> go mean endPoint
+
+        go
+
+    let private consumeOffset (s : Stream) =
+        let firstByte = s.ReadByte ()
+
+        if firstByte < 0 then
+            failwith "expected to read an offset, but got end of file"
+
+        let firstByte = byte firstByte
+        let remainingBytes = Stream.consume s 3
+
+        if firstByte >= 128uy then
+            toUint remainingBytes
+            + ((uint32 (firstByte % 128uy)) <<< 24)
+            |> PackIndexOffset.LayerFiveEntry
+        else
+            toUint remainingBytes
+            + ((uint32 firstByte) <<< 24)
+            |> PackIndexOffset.OffsetInPack
 
     let readIndex (file : IFileInfo) : PackIndex =
         use s = file.OpenRead ()
@@ -288,23 +337,7 @@ module PackFile =
             |> Array.init totalObjectNumber
 
         let offsets =
-            fun _ ->
-                let firstByte = s.ReadByte ()
-
-                if firstByte < 0 then
-                    failwith "expected to read an offset, but got end of file"
-
-                let firstByte = byte firstByte
-                let remainingBytes = Stream.consume s 3
-
-                if firstByte >= 128uy then
-                    toUint remainingBytes
-                    + ((uint32 (firstByte % 128uy)) <<< 24)
-                    |> PackIndexOffset.LayerFiveEntry
-                else
-                    toUint remainingBytes
-                    + ((uint32 firstByte) <<< 24)
-                    |> PackIndexOffset.OffsetInPack
+            fun _ -> consumeOffset s
             |> Array.init totalObjectNumber
 
         let bytesConsumedSoFar =
@@ -312,13 +345,14 @@ module PackFile =
             // for the crc, 4 * (that) for the small offsets.
             4
             + 4
-            + (256 * 4)
+            + 256 * 4
             + 20 * totalObjectNumber
             + 4 * totalObjectNumber
             + 4 * totalObjectNumber
             |> uint64
 
-        // Fortuitously, 20 + 20 is the size of the trailer, and that's divisible by 8.
+        // Fortuitously, 20 + 20 is the size of the trailer, and that's divisible by 8,
+        // so we can just read in all remaining 8-byte chunks.
         let buffer = Array.zeroCreate<byte> 8
         let entries = ResizeArray<byte[]> ()
 
@@ -356,3 +390,99 @@ module PackFile =
             Checksum = checksumPackFile
             ObjectChecksums = crc
         }
+
+    let locateObject (Hash object) (packIndex : IFileInfo) (packFile : IFileInfo) : PackObject option =
+        // Locate the file within the index
+        use packIndex = packIndex.OpenRead ()
+        let header = Stream.consume packIndex 4
+
+        if header <> [| 255uy ; 116uy ; 79uy ; 99uy |] then
+            failwithf "Invalid pack file header, may indicate unsupported version: %+A" header
+
+        let versionBytes = Stream.consume packIndex 4
+        let version = toUint versionBytes
+
+        if version <> 2u then
+            failwithf "Unsupported pack index version %i" version
+
+        let nameLookup = object.[0]
+
+        let startAtThisPrefix, endOfThisPrefix =
+            if nameLookup = 0uy then
+                0L, Stream.consume packIndex 4 |> toUint |> int64
+            else
+                packIndex.Seek ((int64 (nameLookup - 1uy)) * 4L, SeekOrigin.Current)
+                |> ignore
+
+                let before = Stream.consume packIndex 4 |> toUint |> int64
+                let after = Stream.consume packIndex 4 |> toUint |> int64
+                before, after
+
+        let totalCount =
+            packIndex.Seek (4L + 4L + 255L * 4L, SeekOrigin.Begin)
+            |> ignore
+
+            Stream.consume packIndex 4 |> toUint |> int64
+
+        let comparisonMemo = System.Collections.Generic.Dictionary ()
+
+        let lookup (location : int64) : byte[] =
+            match comparisonMemo.TryGetValue location with
+            | true, v -> v
+            | false, _ ->
+
+            packIndex.Seek (4L + 4L + 256L * 4L + location * 20L, SeekOrigin.Begin)
+            |> ignore
+
+            let number = Stream.consume packIndex 20
+            comparisonMemo.[location] <- number
+            number
+
+        let compare (name1 : byte[]) (name2 : byte[]) : Compare =
+            let rec go (i : int) =
+                if i >= 20 then Compare.Equal
+                else if name1.[i] < name2.[i] then Compare.Less
+                elif name1.[i] > name2.[i] then Compare.Greater
+                else go (i + 1)
+
+            go 0
+
+        let location =
+            binarySearch lookup compare (fun x y -> (x + y) / 2L) object startAtThisPrefix endOfThisPrefix
+
+        match location with
+        | None -> None
+        | Some location ->
+
+        packIndex.Seek (
+            4L
+            + 4L
+            + 256L * 4L
+            + totalCount * 24L
+            + location * 4L,
+            SeekOrigin.Begin
+        )
+        |> ignore
+
+        let index = consumeOffset packIndex
+
+        let index =
+            match index with
+            | PackIndexOffset.OffsetInPack i -> int64 i
+            | PackIndexOffset.LayerFiveEntry entry ->
+                packIndex.Seek (
+                    4L
+                    + 4L
+                    + 256L * 4L
+                    + totalCount * 28L
+                    + (int64 entry) * 8L,
+                    SeekOrigin.Begin
+                )
+                |> ignore
+
+                Stream.consume packIndex 8 |> toUint64 |> int64
+
+        use fi = packFile.OpenRead ()
+        fi.Seek (index, SeekOrigin.Begin) |> ignore
+        // TODO constrain where we're reading to, and find the CRC
+        parseObject (Some fi.Length) 0u fi |> fst |> Some

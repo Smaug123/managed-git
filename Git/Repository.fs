@@ -38,6 +38,7 @@ module Repository =
         output.Create ()
         output
 
+    /// TODO this function diverges from `git` itself, which requires the existence of `.git/HEAD`.
     let make (dir : IDirectoryInfo) : Repository option =
         let fs = dir.FileSystem
         let gitPath = fs.Path.Combine (dir.FullName, ".git")
@@ -54,7 +55,7 @@ module Repository =
         else
             None
 
-    let init (dir : IDirectoryInfo) : Result<Repository, InitFailure> =
+    let init (defaultBranchName : BranchName) (dir : IDirectoryInfo) : Result<Repository, InitFailure> =
         match make dir with
         | Some _ -> Error AlreadyGit
         | None ->
@@ -71,5 +72,12 @@ module Repository =
         let refsDir = createSubDir gitDir "refs"
         let _headsDir = createSubDir refsDir "heads"
         let _tagsDir = createSubDir refsDir "tags"
+
+        let fs = dir.FileSystem
+
+        fs.File.WriteAllText (
+            fs.Path.Combine (dir.FullName, ".git", "HEAD"),
+            sprintf "ref: refs/heads/%s" (string<BranchName> defaultBranchName)
+        )
 
         make dir |> Option.get |> Ok

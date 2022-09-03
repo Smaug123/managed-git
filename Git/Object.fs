@@ -6,6 +6,7 @@ type Object =
     | Blob of byte array
     | Tree of TreeEntry list
     | Commit of CommitEntry
+    | Tag of TagEntry
 
     override this.ToString () =
         match this with
@@ -16,6 +17,8 @@ type Object =
             |> String.concat "\n"
             |> sprintf "tree:\n%+A"
         | Commit c -> sprintf "commit:\n%O" c
+        | Tag t ->
+            sprintf "tag:\n%O" t
 
 [<RequireQualifiedAccess>]
 module Object =

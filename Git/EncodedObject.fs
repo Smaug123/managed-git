@@ -18,6 +18,7 @@ module EncodedObject =
             | Object.Blob c -> Blob.encode c
             | Object.Tree entries -> Tree.encode entries
             | Object.Commit c -> Commit.encode c
+            | Object.Tag t -> Tag.encode t
 
         {
             Header =
@@ -25,6 +26,7 @@ module EncodedObject =
                 | Object.Blob _ -> Header.Blob contents.Length
                 | Object.Tree _ -> Header.Tree contents.Length
                 | Object.Commit _ -> Header.Commit contents.Length
+                | Object.Tag _ -> Header.Tag contents.Length
             Content = contents
         }
 

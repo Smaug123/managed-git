@@ -5,6 +5,8 @@ open System.IO
 open System.IO.Abstractions
 open Git.Internals
 open Force.Crc32
+open ICSharpCode.SharpZipLib.Zip.Compression
+open ICSharpCode.SharpZipLib.Zip.Compression.Streams
 
 type PackObjectType =
     | ObjCommit = 1uy
@@ -29,8 +31,7 @@ type PackIndex =
         {
             Names : byte[][]
             Offsets : uint64[]
-            /// 20-byte CRCs of each object
-            ObjectChecksums : byte[][]
+            ObjectChecksums : uint32[]
             /// 20-byte checksum of entire pack file
             Checksum : byte[]
         }
@@ -38,17 +39,19 @@ type PackIndex =
 [<RequireQualifiedAccess>]
 module PackFile =
 
-    let private readSizeEncodedInt (startWith : byte) (s : Stream) : int64 =
-        let rec go (ans : int64) =
+    /// Returns the int, and the bytes read (for CRC32 purposes)
+    let private readSizeEncodedInt (s : Stream) : int64 * byte [] =
+        let rec go (count : int) (bytes : ResizeArray<byte>) (ans : int64) =
             let b = s.ReadByte ()
 
             if b < 0 then
                 failwith "File ended while reading size encoded int"
 
-            let ans = (ans <<< 7) + int64 (b % 128)
-            if b >= 128 then go ans else ans
+            let ans = ans + (int64 (b % 128) <<< (count * 7))
+            bytes.Add (byte b)
+            if b >= 128 then go (count + 1) bytes ans else ans, bytes.ToArray ()
 
-        go (int64 startWith)
+        go 0 (ResizeArray ()) 0L
 
     let private toUint (bytes : byte[]) : uint32 =
         let mutable ans = 0u
@@ -66,7 +69,18 @@ module PackFile =
 
         ans
 
-    let private parseObject (s : Stream) =
+    type Preamble =
+        /// 20-byte name
+        | BaseObjectName of byte[]
+        | Offset of int64
+
+    [<RequireQualifiedAccess>]
+    type PackObject =
+        | Object of Git.Object
+        | Delta of Preamble
+
+    /// If this was the last object, i.e. if untilPos was None, returns the 20-byte footer.
+    let private parseObject (untilPos : int64 option) (expectedCrc : uint32) (s : Stream) : PackObject * byte[] option =
         let firstByte = s.ReadByte ()
 
         if firstByte < 0 then
@@ -79,16 +93,91 @@ module PackFile =
 
         let startSize = firstByte % 16uy
 
-        let size =
+        let size, header =
             if firstByte >= 128uy then
-                readSizeEncodedInt startSize s
+                let output, bytes = readSizeEncodedInt s
+                (output <<< 4) + (int64 startSize), [| yield firstByte ; yield! bytes |]
             else
-                int64 startSize
+                int64 startSize, [| firstByte |]
 
-        ()
+        let preamble =
+            match objectType with
+            | PackObjectType.ObjOfsDelta ->
+                readSizeEncodedInt s
+                |> fst
+                |> Preamble.Offset
+                |> Some
+            | PackObjectType.ObjRefDelta ->
+                Stream.consume s 20
+                |> Preamble.BaseObjectName
+                |> Some
+            | _ -> None
 
-    let read (file : IFileInfo) (index : PackIndex) =
-        use s = file.OpenRead ()
+        let object, footer =
+            match untilPos with
+            | None ->
+                let finalObjectAndFooter = Stream.consumeToEnd s
+                finalObjectAndFooter.[0..finalObjectAndFooter.Length - 21], Some finalObjectAndFooter.[finalObjectAndFooter.Length - 20 ..]
+            | Some untilPos ->
+                let numToConsume = int (untilPos - s.Position)
+                if numToConsume < 0 then
+                    failwith "Internal error: object too large for this implementation to consume"
+                Stream.consume s numToConsume, None
+
+        // TODO - check CRCs, this is currently failing
+        //let obtainedCrc = Crc32Algorithm.Compute (object)
+        //if obtainedCrc <> expectedCrc then
+        //    failwithf "Compressed object had unexpected CRC. Expected: %i. Got: %i" expectedCrc obtainedCrc
+
+        use objectStream = new MemoryStream (object)
+        use s = new InflaterInputStream (objectStream, Inflater ())
+        use resultStream = new MemoryStream ()
+        s.CopyTo resultStream
+        let decompressedObject = resultStream.ToArray ()
+        if decompressedObject.LongLength <> size then
+            failwithf "Object had unexpected length. Expected: %i. Got: %i" size decompressedObject.LongLength
+
+        let toRet =
+            match objectType, preamble with
+            | PackObjectType.ObjBlob, None ->
+                Object.Blob decompressedObject
+                |> PackObject.Object
+            | PackObjectType.ObjCommit, None ->
+                Commit.decode decompressedObject
+                |> Object.Commit
+                |> PackObject.Object
+            | PackObjectType.ObjTree, None ->
+                Tree.decode decompressedObject
+                |> Object.Tree
+                |> PackObject.Object
+            | PackObjectType.ObjOfsDelta, Some preamble ->
+                PackObject.Delta preamble
+            | PackObjectType.ObjRefDelta, Some preamble ->
+                PackObject.Delta preamble
+            | PackObjectType.ObjTag, None ->
+                Tag.decode decompressedObject
+                |> Object.Tag
+                |> PackObject.Object
+            | PackObjectType.ObjBlob, Some _
+            | PackObjectType.ObjTag, Some _
+            | PackObjectType.ObjTree, Some _
+            | PackObjectType.ObjCommit, Some _ ->
+                failwith "Logic error in this library, got a preamble for an unexpected object type"
+            | PackObjectType.ObjRefDelta, None
+            | PackObjectType.ObjOfsDelta, None ->
+                failwith "Logic error in this library, got no preamble for a delta type"
+            | _, _ ->
+                failwith "Unexpected object type"
+        toRet, footer
+
+    type private HeaderMetadata =
+        {
+            Stream : Stream
+            NumberOfObjects : uint32
+        }
+
+    let private readAndValidateHeader (file : IFileInfo) : HeaderMetadata =
+        let s = file.OpenRead ()
         let header = Stream.consume s 4
 
         if header <> [| 80uy ; 65uy ; 67uy ; 75uy |] then
@@ -99,22 +188,51 @@ module PackFile =
         let version = toUint versionBytes
 
         if version <> 2u then
-            failwithf "Unsupported packfile version %i" version
+            failwithf "Unsupported pack file version %i" version
 
-        let sizeBytes = Stream.consume s 4
-        let size = toUint sizeBytes
         let objectNumBytes = Stream.consume s 4
         let numberOfObjects = toUint objectNumBytes
 
-        parseObject s
-        ()
+        { Stream = s ; NumberOfObjects = numberOfObjects }
+
+    let readAll (file : IFileInfo) (index : PackIndex) =
+        let { Stream = stream ; NumberOfObjects = numberOfObjects } = readAndValidateHeader file
+        use stream = stream
+
+        let objectPositions =
+            index.Offsets
+            |> Array.map int64
+            |> Array.sort
+
+        index.ObjectChecksums
+        |> Array.map (fun crc ->
+            let nextObjectIndex =
+                // TODO probably binary search this
+                objectPositions
+                |> Array.tryFindIndex (fun pos -> pos > stream.Position)
+
+            // Account for the case where the index file contains garbage
+            let startingIndex =
+                match nextObjectIndex with
+                | None ->
+                    objectPositions.[objectPositions.Length - 1]
+                | Some 0 -> stream.Position
+                | Some i -> objectPositions.[i - 1]
+
+            if startingIndex <> stream.Position then
+                stream.Seek (startingIndex, SeekOrigin.Begin) |> ignore
+
+            let nextObjectPosition = nextObjectIndex |> Option.map (fun i -> objectPositions.[i])
+
+            parseObject nextObjectPosition crc stream
+        )
 
     let readIndex (file : IFileInfo) : PackIndex =
         use s = file.OpenRead ()
         let header = Stream.consume s 4
 
         if header <> [| 255uy ; 116uy ; 79uy ; 99uy |] then
-            failwithf "Invalid packfile header, may indicate unsupported version: %+A" header
+            failwithf "Invalid pack file header, may indicate unsupported version: %+A" header
 
         let versionBytes = Stream.consume s 4
         let version = toUint versionBytes
@@ -141,7 +259,7 @@ module PackFile =
 
         if int64 totalObjectNumber > int64 Int32.MaxValue then
             failwithf
-                "Internal error: we don't yet support packfiles with more than %i entries (%s)"
+                "Internal error: we don't yet support pack files with more than %i entries (%s)"
                 Int32.MaxValue
                 file.FullName
 
@@ -152,7 +270,9 @@ module PackFile =
             |> Array.init totalObjectNumber
 
         let crc =
-            fun _ -> Stream.consume s 4
+            fun _ ->
+                Stream.consume s 4
+                |> toUint
             |> Array.init totalObjectNumber
 
         let offsets =

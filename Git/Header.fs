@@ -4,7 +4,7 @@ type Header =
     | Blob of int // length of content
     | Tree of int // length of content
     | Commit of int // length of content
-// | Tag
+    | Tag of int // length of content
 
 [<RequireQualifiedAccess>]
 module internal Header =
@@ -23,6 +23,9 @@ module internal Header =
             | Header.Blob length -> sprintf "blob %i" length
             | Header.Tree length -> sprintf "tree %i" length
             | Header.Commit length -> sprintf "commit %i" length
+            | Header.Tag length ->
+                // TODO - is this correct?
+                sprintf "tag %i" length
 
         // If perf critical, could optimise allocation here
         Array.append (System.Text.Encoding.ASCII.GetBytes s) [| 0uy |]

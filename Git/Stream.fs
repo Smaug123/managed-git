@@ -50,7 +50,7 @@ module internal Stream =
 
         output
 
-    let consumeToEnd (b : MemoryStream) : byte array =
+    let consumeToEnd (b : Stream) : byte array =
         use newMs = new MemoryStream ()
         b.CopyTo newMs
         newMs.ToArray ()

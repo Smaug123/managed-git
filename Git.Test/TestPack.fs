@@ -21,5 +21,5 @@ module TestPack =
                 "/Users/patrick/Documents/GitHub/stable-diffusion/.git/objects/pack/pack-871a8f18e20fa6104dbd769a07ca12f832048d00.idx"
             |> PackFile.readIndex
 
-        PackFile.read fi index
+        let objects = PackFile.readAll fi index
         ()

@@ -30,7 +30,7 @@ module Repository =
         r.Fs.Path.Combine ((gitDir r).FullName, "refs")
         |> r.Fs.DirectoryInfo.FromDirectoryName
 
-    let internal createSubdir (r : IDirectoryInfo) (name : string) : IDirectoryInfo =
+    let internal createSubDir (r : IDirectoryInfo) (name : string) : IDirectoryInfo =
         let output =
             r.FileSystem.Path.Combine (r.FullName, name)
             |> r.FileSystem.DirectoryInfo.FromDirectoryName
@@ -64,12 +64,12 @@ module Repository =
         else
 
         // TODO do this atomically
-        let gitDir = createSubdir dir ".git"
-        let objectDir = createSubdir gitDir "objects"
-        let _packDir = createSubdir objectDir "pack"
-        let _infoDir = createSubdir objectDir "info"
-        let refsDir = createSubdir gitDir "refs"
-        let _headsDir = createSubdir refsDir "heads"
-        let _tagsDir = createSubdir refsDir "tags"
+        let gitDir = createSubDir dir ".git"
+        let objectDir = createSubDir gitDir "objects"
+        let _packDir = createSubDir objectDir "pack"
+        let _infoDir = createSubDir objectDir "info"
+        let refsDir = createSubDir gitDir "refs"
+        let _headsDir = createSubDir refsDir "heads"
+        let _tagsDir = createSubDir refsDir "tags"
 
         make dir |> Option.get |> Ok

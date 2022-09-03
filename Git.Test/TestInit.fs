@@ -20,7 +20,7 @@ module TestInit =
 
         gitDir.Create ()
 
-        let r =
+        let _ =
             match Repository.init gitDir with
             | Ok r -> r
             | Error r -> failwithf "Failed to init repo: %+A" r

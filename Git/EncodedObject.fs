@@ -99,7 +99,7 @@ module EncodedObject =
         let objectName = hashStr.[2..]
         let subDir = hashStr.[0..1]
 
-        let d = Repository.createSubdir (Repository.objectDir r) subDir
+        let d = Repository.createSubDir (Repository.objectDir r) subDir
         use filestream = r.Fs.File.Create (r.Fs.Path.Combine (d.FullName, objectName))
 
         compress o filestream

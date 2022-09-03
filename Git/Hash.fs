@@ -50,7 +50,7 @@ module Hash =
         let rec b (pos : int) =
             seq {
                 if pos < input.Length then
-                    yield value (input.[pos]) * 16uy + value input.[pos + 1]
+                    yield value input.[pos] * 16uy + value input.[pos + 1]
                     yield! b (pos + 2)
             }
 

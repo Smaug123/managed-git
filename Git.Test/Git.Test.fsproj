@@ -24,6 +24,7 @@
         <Compile Include="TestCommit.fs" />
         <Compile Include="TestObject.fs" />
         <Compile Include="TestLog.fs" />
+        <Compile Include="TestPack.fs" />
     </ItemGroup>
 
     <ItemGroup>

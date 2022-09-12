@@ -1,10 +1,7 @@
 namespace Git
 
-type Header =
-    | Blob of int // length of content
-    | Tree of int // length of content
-    | Commit of int // length of content
-    | Tag of int // length of content
+/// An object type and the length of its content.
+type internal Header = ObjectType * int
 
 [<RequireQualifiedAccess>]
 module internal Header =
@@ -20,10 +17,10 @@ module internal Header =
     let toBytes (h : Header) : byte array =
         let s =
             match h with
-            | Header.Blob length -> sprintf "blob %i" length
-            | Header.Tree length -> sprintf "tree %i" length
-            | Header.Commit length -> sprintf "commit %i" length
-            | Header.Tag length ->
+            | ObjectType.Blob, length -> sprintf "blob %i" length
+            | ObjectType.Tree, length -> sprintf "tree %i" length
+            | ObjectType.Commit, length -> sprintf "commit %i" length
+            | ObjectType.Tag, length ->
                 // TODO - is this correct?
                 sprintf "tag %i" length
 
@@ -44,7 +41,7 @@ module internal Header =
                     && s.[4] = 32uy
                 then
                     let number = parseIntFromAsciiBytes 5 s
-                    Header.Blob number |> Some
+                    (ObjectType.Blob, number) |> Some
                 else
                     None
             | 116uy ->
@@ -56,7 +53,7 @@ module internal Header =
                     && s.[4] = 32uy
                 then
                     let number = parseIntFromAsciiBytes 5 s
-                    Header.Tree number |> Some
+                    (ObjectType.Tree, number) |> Some
                 else
                     None
             | 99uy ->
@@ -71,7 +68,7 @@ module internal Header =
                     && s.[6] = 32uy
                 then
                     let number = parseIntFromAsciiBytes 7 s
-                    Header.Commit number |> Some
+                    (ObjectType.Commit, number) |> Some
                 else
                     None
             | _ -> None

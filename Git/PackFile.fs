@@ -19,9 +19,7 @@ type PackObjectType =
     | ObjRefDelta = 7uy
 
 type private PackIndexOffset =
-    /// This entry is indicating that the corresponding value can be found in the pack file
-    /// at the given offset.
-    | OffsetInPack of uint32
+    | RawOffset of uint32
     /// This entry is indicating that the index's fifth layer contains the offset, and it's
     /// at this offset within the fifth layer.
     | LayerFiveEntry of uint32
@@ -36,18 +34,32 @@ type PackIndex =
             Checksum : byte[]
         }
 
+type PackObjectMetadata =
+    {
+        SizeCompressed : uint64
+        SizeUncompressed : uint64
+        OffsetInPackFile : uint64
+    }
+    override this.ToString () =
+        sprintf "%i %i %i" this.SizeUncompressed this.SizeCompressed this.OffsetInPackFile
+
+type PackObject =
+    /// TODO: interpret the byte array as a delta. It's already been decompressed.
+    | Delta of PackObject * byte array * Hash * PackObjectMetadata
+    | Object of Git.Object * Hash * PackObjectMetadata
+
 [<RequireQualifiedAccess>]
 module PackFile =
 
     /// Returns the int, and the bytes read (for CRC32 purposes)
-    let private readSizeEncodedInt (s : Stream) : int64 * byte[] =
-        let rec go (count : int) (bytes : ResizeArray<byte>) (ans : int64) =
+    let private readSizeEncodedInt (s : Stream) : uint64 * byte[] =
+        let rec go (count : int) (bytes : ResizeArray<byte>) (ans : uint64) =
             let b = s.ReadByte ()
 
             if b < 0 then
                 failwith "File ended while reading size encoded int"
 
-            let ans = ans + (int64 (b % 128) <<< (count * 7))
+            let ans = ans + (uint64 (b % 128) <<< (count * 7))
             bytes.Add (byte b)
 
             if b >= 128 then
@@ -55,7 +67,28 @@ module PackFile =
             else
                 ans, bytes.ToArray ()
 
-        go 0 (ResizeArray ()) 0L
+        go 0 (ResizeArray ()) 0UL
+
+    let private readDeltaEncodedInt (s : Stream) : uint64 * byte[] =
+        let rec go (count : int) (bytes : ResizeArray<byte>) (ans : uint64) =
+            let b = s.ReadByte ()
+
+            if b < 0 then
+                failwith "File ended while reading size encoded int"
+
+            let ans = (ans <<< 7) + uint64 (b % 128)
+            bytes.Add (byte b)
+
+            if b >= 128 then
+                go (count + 1) bytes ans
+            else
+                let bytes = bytes.ToArray ()
+                let mutable ans = ans
+                for i in 1..count do
+                    ans <- ans + (1UL <<< (7 * i))
+                ans, bytes
+
+        go 0 (ResizeArray ()) 0UL
 
     let private toUint (bytes : byte[]) : uint32 =
         let mutable ans = 0u
@@ -73,19 +106,20 @@ module PackFile =
 
         ans
 
-    type Preamble =
+    type private Preamble =
         /// 20-byte name
-        | BaseObjectName of byte[]
-        | Offset of int64
+        | BaseObjectName of Hash
+        | Offset of uint64
 
     [<RequireQualifiedAccess>]
-    type PackObject =
+    type private ParsedPackObject =
         | Object of Git.Object
-        | Delta of Preamble
+        | Delta of Preamble * data : byte[]
 
     /// If this was the last object, i.e. if untilPos was None, returns the 20-byte footer.
     /// TODO fix up the domain so that the None case is a separate function
-    let private parseObject (untilPos : int64 option) (expectedCrc : uint32) (s : Stream) : PackObject * byte[] option =
+    let private parseObject (untilPos : uint64 option) (expectedCrc : uint32) (s : Stream) : ParsedPackObject * PackObjectMetadata * byte[] option =
+        let startingOffset = s.Position |> uint64
         let firstByte = s.ReadByte ()
 
         if firstByte < 0 then
@@ -101,19 +135,21 @@ module PackFile =
         let size, header =
             if firstByte >= 128uy then
                 let output, bytes = readSizeEncodedInt s
-                (output <<< 4) + (int64 startSize), [| yield firstByte ; yield! bytes |]
+                (output <<< 4) + (uint64 startSize), [| yield firstByte ; yield! bytes |]
             else
-                int64 startSize, [| firstByte |]
+                uint64 startSize, [| firstByte |]
 
         let preamble =
             match objectType with
             | PackObjectType.ObjOfsDelta ->
-                readSizeEncodedInt s
+                // Require 47027985, started at position 47149779, need offset of 121794
+                readDeltaEncodedInt s
                 |> fst
                 |> Preamble.Offset
                 |> Some
             | PackObjectType.ObjRefDelta ->
                 Stream.consume s 20
+                |> Hash.ofBytes
                 |> Preamble.BaseObjectName
                 |> Some
             | _ -> None
@@ -126,10 +162,13 @@ module PackFile =
                 finalObjectAndFooter.[0 .. finalObjectAndFooter.Length - 21],
                 Some finalObjectAndFooter.[finalObjectAndFooter.Length - 20 ..]
             | Some untilPos ->
-                let numToConsume = int (untilPos - s.Position)
-
-                if numToConsume < 0 then
+                let numToConsume =
+                    if untilPos < uint64 s.Position then
+                        failwith "Tried to consume into a negative stream offset"
+                    untilPos - uint64 s.Position
+                if numToConsume > uint64 Int32.MaxValue then
                     failwith "Internal error: object too large for this implementation to consume"
+                let numToConsume = int numToConsume
 
                 Stream.consume s numToConsume, None
 
@@ -144,28 +183,35 @@ module PackFile =
         s.CopyTo resultStream
         let decompressedObject = resultStream.ToArray ()
 
-        if decompressedObject.LongLength <> size then
+        if uint64 decompressedObject.LongLength <> size then
             failwithf "Object had unexpected length. Expected: %i. Got: %i" size decompressedObject.LongLength
+
+        let packObjectMetadata =
+            {
+                SizeCompressed = uint64 object.LongLength
+                SizeUncompressed = size
+                OffsetInPackFile = startingOffset
+            }
 
         let toRet =
             match objectType, preamble with
             | PackObjectType.ObjBlob, None ->
                 Object.Blob decompressedObject
-                |> PackObject.Object
+                |> ParsedPackObject.Object
             | PackObjectType.ObjCommit, None ->
                 Commit.decode decompressedObject
                 |> Object.Commit
-                |> PackObject.Object
+                |> ParsedPackObject.Object
             | PackObjectType.ObjTree, None ->
                 Tree.decode decompressedObject
                 |> Object.Tree
-                |> PackObject.Object
-            | PackObjectType.ObjOfsDelta, Some preamble -> PackObject.Delta preamble
-            | PackObjectType.ObjRefDelta, Some preamble -> PackObject.Delta preamble
+                |> ParsedPackObject.Object
+            | PackObjectType.ObjOfsDelta, Some preamble -> ParsedPackObject.Delta (preamble, decompressedObject)
+            | PackObjectType.ObjRefDelta, Some preamble -> ParsedPackObject.Delta (preamble, decompressedObject)
             | PackObjectType.ObjTag, None ->
                 Tag.decode decompressedObject
                 |> Object.Tag
-                |> PackObject.Object
+                |> ParsedPackObject.Object
             | PackObjectType.ObjBlob, Some _
             | PackObjectType.ObjTag, Some _
             | PackObjectType.ObjTree, Some _
@@ -176,7 +222,7 @@ module PackFile =
                 failwith "Logic error in this library, got no preamble for a delta type"
             | _, _ -> failwith "Unexpected object type"
 
-        toRet, footer
+        toRet, packObjectMetadata, footer
 
     type private HeaderMetadata =
         {
@@ -206,38 +252,79 @@ module PackFile =
             NumberOfObjects = numberOfObjects
         }
 
+    let private resolveDeltas
+        (packs : (Hash * uint64 * (ParsedPackObject * PackObjectMetadata * byte[] option)) array)
+        : PackObject []
+        =
+        let packsByOffset = packs |> Seq.map (fun (hash, offset, data) -> offset, (hash, data)) |> Map.ofSeq
+        let packsByHash = packs |> Seq.map (fun (hash, offset, data) -> hash, (offset, data)) |> Map.ofSeq
+
+        let rec resolve (object : ParsedPackObject) (name : Hash) (metadata : PackObjectMetadata) : PackObject =
+            match object with
+            | ParsedPackObject.Object o ->
+                PackObject.Object (o, name, metadata)
+            | ParsedPackObject.Delta (deltaType, diff) ->
+                match deltaType with
+                | Preamble.BaseObjectName name ->
+                    let _, (derivedObject, derivedMetadata, _) =
+                        match Map.tryFind name packsByHash with
+                        | Some x -> x
+                        | None ->
+                            failwithf "Could not find object %s in pack file" (Hash.toString name)
+                    (resolve derivedObject name derivedMetadata, diff, name, metadata)
+                    |> PackObject.Delta
+                | Preamble.Offset offset ->
+                    let absolutePosition =
+                        if metadata.OffsetInPackFile < offset then
+                            failwith "tried to offset into a negative number"
+                        metadata.OffsetInPackFile - offset
+                    let derivedName, (derivedObject, derivedMetadata, _) =
+                        match Map.tryFind absolutePosition packsByOffset with
+                        | None ->
+                            failwithf "Unable to find object %s at absolute position %i (calculated as offset %i from position %i)" (Hash.toString name) absolutePosition offset metadata.OffsetInPackFile
+                        | Some (a, b) -> a, b
+                    (resolve derivedObject derivedName derivedMetadata, diff, name, metadata)
+                    |> PackObject.Delta
+
+        packs
+        |> Array.map (fun (name, _, (parsed, metadata, _)) -> resolve parsed name metadata)
+
     let readAll (file : IFileInfo) (index : PackIndex) =
         let header = readAndValidateHeader file
 
         use stream = header.Stream
 
-        let objectPositions = index.Offsets |> Array.map int64 |> Array.sort
+        let sortedObjectPositions =
+            index.Offsets
+            |> Array.sort
 
-        index.ObjectChecksums
-        |> Array.map (fun crc ->
-            let nextObjectIndex =
-                // TODO probably binary search this, or maintain an incrementing
-                // counter
-                objectPositions
-                |> Array.tryFindIndex (fun pos -> pos > stream.Position)
+        let packs =
+            Array.zip3 index.ObjectChecksums index.Names index.Offsets
+            |> Array.map (fun (crc, name, offset) ->
+                let nextObjectIndex =
+                    // TODO probably binary search this, or maintain an incrementing
+                    // counter
+                    sortedObjectPositions
+                    |> Array.tryFindIndex (fun pos -> pos > offset)
 
-            // Account for the case where the index file contains garbage
-            let startingIndex =
-                match nextObjectIndex with
-                | None -> objectPositions.[objectPositions.Length - 1]
-                | Some 0 -> stream.Position
-                | Some i -> objectPositions.[i - 1]
+                // Account for the case where the index file contains garbage
+                let startingIndex =
+                    match nextObjectIndex with
+                    | None -> sortedObjectPositions.[sortedObjectPositions.Length - 1]
+                    | Some 0 -> uint64 stream.Position
+                    | Some i -> sortedObjectPositions.[i - 1]
 
-            if startingIndex <> stream.Position then
-                stream.Seek (startingIndex, SeekOrigin.Begin)
+                stream.Seek (int64 startingIndex, SeekOrigin.Begin)
                 |> ignore
 
-            let nextObjectPosition =
-                nextObjectIndex
-                |> Option.map (fun i -> objectPositions.[i])
+                let nextObjectPosition =
+                    nextObjectIndex
+                    |> Option.map (fun i -> sortedObjectPositions.[i])
 
-            parseObject nextObjectPosition crc stream
-        )
+                Hash.ofBytes name, startingIndex, parseObject nextObjectPosition crc stream
+            )
+
+        resolveDeltas packs
 
     type private Compare =
         | Less
@@ -272,7 +359,7 @@ module PackFile =
 
         go
 
-    let private consumeOffset (s : Stream) =
+    let private consumeOffset (s : Stream) : PackIndexOffset =
         let firstByte = s.ReadByte ()
 
         if firstByte < 0 then
@@ -288,7 +375,7 @@ module PackFile =
         else
             toUint remainingBytes
             + ((uint32 firstByte) <<< 24)
-            |> PackIndexOffset.OffsetInPack
+            |> PackIndexOffset.RawOffset
 
     let readIndex (file : IFileInfo) : PackIndex =
         use s = file.OpenRead ()
@@ -380,8 +467,10 @@ module PackFile =
             offsets
             |> Array.map (fun offset ->
                 match offset with
-                | OffsetInPack i -> uint64 i
-                | LayerFiveEntry i -> longEntries.[int i]
+                | PackIndexOffset.LayerFiveEntry i ->
+                    longEntries.[int i]
+                | PackIndexOffset.RawOffset i ->
+                    uint64 i
             )
 
         {
@@ -391,9 +480,9 @@ module PackFile =
             ObjectChecksums = crc
         }
 
-    let locateObject (Hash object) (packIndex : IFileInfo) (packFile : IFileInfo) : PackObject option =
-        // Locate the file within the index
-        use packIndex = packIndex.OpenRead ()
+    /// The streams are expected to be seekable and readable.
+    /// The packFile stream is expected to have a Length.
+    let rec private locateObjectInStream (Hash object as hash) (packIndex : Stream) (packFile : Stream) : PackObject option =
         let header = Stream.consume packIndex 4
 
         if header <> [| 255uy ; 116uy ; 79uy ; 99uy |] then
@@ -468,7 +557,8 @@ module PackFile =
 
         let index =
             match index with
-            | PackIndexOffset.OffsetInPack i -> int64 i
+            | PackIndexOffset.RawOffset i ->
+                int64 i
             | PackIndexOffset.LayerFiveEntry entry ->
                 packIndex.Seek (
                     4L
@@ -482,7 +572,31 @@ module PackFile =
 
                 Stream.consume packIndex 8 |> toUint64 |> int64
 
-        use fi = packFile.OpenRead ()
-        fi.Seek (index, SeekOrigin.Begin) |> ignore
-        // TODO constrain where we're reading to, and find the CRC
-        parseObject (Some fi.Length) 0u fi |> fst |> Some
+        packFile.Seek (index, SeekOrigin.Begin) |> ignore
+        let object, metadata, _ =
+            // TODO constrain where we're reading to, and find the CRC
+            parseObject (Some (uint64 packFile.Length)) 0u packFile
+
+        match object with
+        | ParsedPackObject.Object o -> PackObject.Object (o, hash, metadata) |> Some
+        | ParsedPackObject.Delta (preamble, data) ->
+
+        match preamble with
+        | Preamble.BaseObjectName name ->
+            let subObject = locateObjectInStream name packIndex packFile
+            match subObject with
+            | None ->
+                failwithf "Failed to find sub-object with name %s" (Hash.toString name)
+            | Some subObject ->
+                (subObject, data, hash, metadata)
+                |> PackObject.Delta
+                |> Some
+        | Preamble.Offset offset ->
+            (failwith "", data, hash, metadata)
+            |> PackObject.Delta
+            |> Some
+
+    let locateObject (h : Hash) (packIndex : IFileInfo) (packFile : IFileInfo) : PackObject option =
+        use index = packIndex.OpenRead ()
+        use file = packFile.OpenRead ()
+        locateObjectInStream h index file

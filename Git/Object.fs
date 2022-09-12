@@ -65,3 +65,10 @@ module Object =
         |> Seq.map (fun i -> sprintf "%s%s" i.Directory.Name i.Name)
         |> Seq.map Hash.ofString
         |> List.ofSeq
+
+    let getType (o : Object) : ObjectType =
+        match o with
+        | Object.Blob _ -> ObjectType.Blob
+        | Object.Tag _ -> ObjectType.Tag
+        | Object.Tree _ -> ObjectType.Tree
+        | Object.Commit _ -> ObjectType.Commit

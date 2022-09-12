@@ -20,3 +20,16 @@ type Contributor =
 
     override this.ToString () =
         sprintf "%s <%s> %i %s" this.Name this.Email this.Date this.DateTimezone
+
+type ObjectType =
+    | Commit
+    | Blob
+    | Tag
+    | Tree
+
+    override this.ToString () =
+        match this with
+        | ObjectType.Commit -> "commit"
+        | ObjectType.Blob -> "blob"
+        | ObjectType.Tag -> "tag"
+        | ObjectType.Tree -> "tree"

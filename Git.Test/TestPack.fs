@@ -1,7 +1,6 @@
 namespace Git.Test
 
 open System.IO.Abstractions
-open System.Text
 open NUnit.Framework
 open FsUnitTyped
 open Git
@@ -39,15 +38,18 @@ module TestPack =
             fs.FileInfo.FromFileName
                 "/Users/patrick/Documents/GitHub/stable-diffusion/.git/objects/pack/pack-871a8f18e20fa6104dbd769a07ca12f832048d00.idx"
 
-        let object =
+        let desiredObject = Hash.ofString "1c4bb25a779f34d86b2d90e584ac67af91bb1303"
+        let object, name, _metadata =
             PackFile.locateObject
-                (Hash.ofSpelling (Encoding.ASCII.GetBytes "1c4bb25a779f34d86b2d90e584ac67af91bb1303"))
+                desiredObject
                 indexFile
                 fi
             |> Option.get
             |> function
-                | PackFile.PackObject.Object (Object.Blob b) -> b
+                | PackObject.Object (Object.Blob b, name, metadata) -> b, name, metadata
                 | _ -> failwith "unexpected"
+
+        name |> shouldEqual desiredObject
 
         System.IO.File.WriteAllBytes ("/Users/patrick/Documents/GitHub/stable-diffusion/foo2.txt", object)
         ()

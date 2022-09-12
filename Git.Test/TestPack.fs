@@ -1,6 +1,7 @@
 namespace Git.Test
 
-open System.IO.Abstractions
+open System.IO.Abstractions.TestingHelpers
+open System.Text
 open NUnit.Framework
 open FsUnitTyped
 open Git
@@ -9,45 +10,39 @@ open Git
 module TestPack =
 
     [<Test>]
-    [<Explicit "Hits a real filesystem, only intended to work while developing">]
-    let ``Example`` () =
-        let fs = FileSystem ()
+    let ``verify-index snapshot test`` () =
+        let fs = MockFileSystem ()
 
-        let fi =
-            fs.FileInfo.FromFileName
-                "/Users/patrick/Documents/GitHub/stable-diffusion/.git/objects/pack/pack-871a8f18e20fa6104dbd769a07ca12f832048d00.pack"
+        let repoDir =
+            fs.Path.Combine (fs.Path.GetTempPath (), "repo")
+            |> fs.DirectoryInfo.FromDirectoryName
 
-        let index =
-            fs.FileInfo.FromFileName
-                "/Users/patrick/Documents/GitHub/stable-diffusion/.git/objects/pack/pack-871a8f18e20fa6104dbd769a07ca12f832048d00.idx"
-            |> PackFile.readIndex
+        repoDir.Create ()
 
-        let objects = PackFile.readAll fi index
-        ()
+        let repo =
+            match Repository.init (BranchName "main") repoDir with
+            | Ok r -> r
+            | Error e -> failwithf "Oh no: %+A" e
 
-    [<Test>]
-    [<Explicit "Hits a real filesystem, only intended to work while developing">]
-    let ``Look up a specific object`` () =
-        let fs = FileSystem ()
+        let ident = "fd1ac4dab39afd8713d495c8bc30ae9ea6157eea"
+        let indexBytes = Resource.get (sprintf "pack-%s.idx" ident)
+        let packBytes = Resource.get (sprintf "pack-%s.pack" ident)
 
-        let fi =
-            fs.FileInfo.FromFileName
-                "/Users/patrick/Documents/GitHub/stable-diffusion/.git/objects/pack/pack-871a8f18e20fa6104dbd769a07ca12f832048d00.pack"
+        fs.File.WriteAllBytes (
+            fs.Path.Combine (repoDir.FullName, ".git", "objects", "pack", sprintf "pack-%s.idx" ident),
+            indexBytes
+        )
 
-        let indexFile =
-            fs.FileInfo.FromFileName
-                "/Users/patrick/Documents/GitHub/stable-diffusion/.git/objects/pack/pack-871a8f18e20fa6104dbd769a07ca12f832048d00.idx"
+        fs.File.WriteAllBytes (
+            fs.Path.Combine (repoDir.FullName, ".git", "objects", "pack", sprintf "pack-%s.pack" ident),
+            packBytes
+        )
 
-        let desiredObject = Hash.ofString "1c4bb25a779f34d86b2d90e584ac67af91bb1303"
+        let verification = VerifyPack.verify repo (Hash.ofString ident)
 
-        let object, name, _metadata =
-            PackFile.locateObject desiredObject indexFile fi
-            |> Option.get
-            |> function
-                | PackObject.Object (Object.Blob b, name, metadata) -> b, name, metadata
-                | _ -> failwith "unexpected"
+        let expected =
+            Resource.get "verify-pack.txt"
+            |> Encoding.ASCII.GetString
+            |> fun s -> s.ReplaceLineEndings ("\n")
 
-        name |> shouldEqual desiredObject
-
-        System.IO.File.WriteAllBytes ("/Users/patrick/Documents/GitHub/stable-diffusion/foo2.txt", object)
-        ()
+        verification.ToString () |> shouldEqual expected

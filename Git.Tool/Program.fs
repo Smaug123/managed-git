@@ -21,8 +21,10 @@ module Program =
         | Some repo ->
 
         match args with
-        | [| "verify-pack" ; "-v" ; path |] ->
-            let verification = VerifyPack.verify repo path
+        | [| "verify-pack" ; "-v" ; hash |] ->
+            // TODO: this is not an exact match with Git, in that `git verify-pack`
+            // specifies a path to a file, not a hash's integrity to verify.
+            let verification = VerifyPack.verify repo (Hash.ofString hash)
             printfn "%s" (string<PackVerification> verification)
             0
         | _ -> failwith "unrecognised args"

@@ -19,6 +19,7 @@
         <Compile Include="Tag.fs" />
         <Compile Include="Object.fs" />
         <Compile Include="PackFile.fs" />
+        <Compile Include="VerifyPack.fs" />
         <Compile Include="EncodedObject.fs" />
         <Compile Include="Reference.fs" />
         <Compile Include="SymbolicReference.fs" />

@@ -1,15 +1,16 @@
 ﻿namespace Git.Tool
 
-open System
 open System.IO
 open System.IO.Abstractions
 open Git
+open Git.Commands
 
 module Program =
 
     [<EntryPoint>]
     let main args =
         let fs = FileSystem ()
+        let printer = Printer.make ()
 
         let repo =
             Directory.GetCurrentDirectory ()
@@ -22,9 +23,6 @@ module Program =
 
         match args with
         | [| "verify-pack" ; "-v" ; hash |] ->
-            // TODO: this is not an exact match with Git, in that `git verify-pack`
-            // specifies a path to a file, not a hash's integrity to verify.
-            let verification = VerifyPack.verify repo (Hash.ofString hash)
-            printfn "%s" (string<PackVerification> verification)
+            VerifyPack.verifyVerbose printer repo hash
             0
         | _ -> failwith "unrecognised args"

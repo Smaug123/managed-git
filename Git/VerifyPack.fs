@@ -63,7 +63,6 @@ type PackVerification =
             // and will give a different answer depending on where you called the command
             // from.
             yield sprintf ".git/objects/pack/pack-%s.pack: ok" (Hash.toString this.Name)
-            yield ""
         }
         |> String.concat "\n"
 

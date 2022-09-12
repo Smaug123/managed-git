@@ -23,7 +23,9 @@
         <Compile Include="EncodedObject.fs" />
         <Compile Include="Reference.fs" />
         <Compile Include="SymbolicReference.fs" />
+        <Compile Include="Commands\Printer.fs" />
         <Compile Include="Commands\Log.fs" />
+        <Compile Include="Commands\VerifyPack.fs" />
     </ItemGroup>
 
     <ItemGroup>

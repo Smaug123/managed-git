@@ -1,6 +1,4 @@
-namespace Git.Tool
-
-open Git
+namespace Git
 
 type PackVerificationLine =
     {
@@ -39,6 +37,8 @@ type PackVerification =
         /// The array is only as long as it needs to be, so it might not have any elements.
         ChainCounts : int[]
         Lines : Choice<PackVerificationLine, PackVerificationLineDelta> array
+        Repo : Repository
+        Name : Hash
     }
 
     override this.ToString () =
@@ -58,6 +58,12 @@ type PackVerification =
                 |> Seq.mapi (fun index count ->
                     sprintf "chain length = %i: %i object%s" (index + 1) count (if count = 1 then "" else "s")
                 )
+
+            // TODO: this isn't quite the same as Git. Git will allow you to omit `.pack`,
+            // and will give a different answer depending on where you called the command
+            // from.
+            yield sprintf ".git/objects/pack/pack-%s.pack: ok" (Hash.toString this.Name)
+            yield ""
         }
         |> String.concat "\n"
 
@@ -66,9 +72,10 @@ module VerifyPack =
 
     /// The ID is e.g. "871a8f18e20fa6104dbd769a07ca12f832048d00"; so the pack file
     /// derived from the ID is `.git/objects/pack/pack-{id}.pack".
-    let verify (repo : Repository) (id : string) : PackVerification =
+    let verify (repo : Repository) (idHash : Hash) : PackVerification =
         let fs = repo.Fs
         let packDir = fs.Path.Combine (Repository.gitDir(repo).FullName, "objects", "pack")
+        let id = Hash.toString idHash
 
         let index =
             fs.Path.Combine (packDir, sprintf "pack-%s.idx" id)
@@ -133,16 +140,16 @@ module VerifyPack =
                 match line with
                 | Choice1Of2 _ -> nonDeltaCount + 1, chainCounts
                 | Choice2Of2 delta ->
-                    nonDeltaCount,
-                    Map.change
-                        delta.Depth
-                        (function
-                        | None -> Some 1
-                        | Some n -> Some (n + 1))
-                        chainCounts
+                    // If we had F#.Core v5, we could use Map.change
+                    let newMap =
+                        match Map.tryFind delta.Depth chainCounts with
+                        | None -> Map.add delta.Depth 1 chainCounts
+                        | Some v -> Map.add delta.Depth (v + 1) chainCounts
+
+                    nonDeltaCount, newMap
             )
 
-        let maxChainLength = chainCounts |> Map.keys |> Seq.last
+        let maxChainLength = chainCounts |> Map.toSeq |> Seq.last |> fst
 
         let chainCounts =
             fun length ->
@@ -154,4 +161,6 @@ module VerifyPack =
             NonDeltaCount = nonDeltaCount
             ChainCounts = chainCounts
             Lines = lines
+            Repo = repo
+            Name = idHash
         }

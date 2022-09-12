@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="Resource.fs" />
         <Compile Include="TestInit.fs" />
         <Compile Include="TestBlob.fs" />
         <Compile Include="TestTree.fs" />
@@ -25,6 +26,9 @@
         <Compile Include="TestObject.fs" />
         <Compile Include="TestLog.fs" />
         <Compile Include="TestPack.fs" />
+        <EmbeddedResource Include="pack-fd1ac4dab39afd8713d495c8bc30ae9ea6157eea.idx" />
+        <EmbeddedResource Include="pack-fd1ac4dab39afd8713d495c8bc30ae9ea6157eea.pack" />
+        <EmbeddedResource Include="verify-pack.txt" />
     </ItemGroup>
 
     <ItemGroup>

@@ -273,6 +273,7 @@ module TestFromGitBook =
                 CommitMessage = "First commit\n"
                 Parents = []
                 Tree = tree1
+                GpgSignature = None
             }
             |> Object.Commit
 
@@ -299,6 +300,7 @@ module TestFromGitBook =
                 CommitMessage = "Second commit\n"
                 Parents = [ c1Hash ]
                 Tree = tree2
+                GpgSignature = None
             }
             |> Object.Commit
 
@@ -322,6 +324,7 @@ module TestFromGitBook =
                 CommitMessage = "Third commit\n"
                 Parents = [ c2Hash ]
                 Tree = tree3
+                GpgSignature = None
             }
             |> Object.Commit
 

@@ -36,6 +36,7 @@ module TestCommit =
                 CommitMessage = "First commit\n"
                 Parents = [ Hash.ofString "c7929fc1cc938780ffdd9f94e0d364e0ea74f210" ]
                 Tree = Hash.ofString "d8329fc1cc938780ffdd9f94e0d364e0ea74f579"
+                GpgSignature = None
             }
             |> Object.Commit
 

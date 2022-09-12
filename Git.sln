@@ -4,6 +4,8 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Git", "Git\Git.fsproj", "{0
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Git.Test", "Git.Test\Git.Test.fsproj", "{CABAAA8F-186F-434A-A9F8-E847B69C3164}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Git.Tool", "Git.Tool\Git.Tool.fsproj", "{3874E18F-DD8F-4A67-854D-9E11B8C628FC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CABAAA8F-186F-434A-A9F8-E847B69C3164}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3874E18F-DD8F-4A67-854D-9E11B8C628FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3874E18F-DD8F-4A67-854D-9E11B8C628FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3874E18F-DD8F-4A67-854D-9E11B8C628FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3874E18F-DD8F-4A67-854D-9E11B8C628FC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -18,21 +18,24 @@ module EncodedObject =
             | Object.Blob c -> Blob.encode c
             | Object.Tree entries -> Tree.encode entries
             | Object.Commit c -> Commit.encode c
+            | Object.Tag t -> Tag.encode t
 
         {
             Header =
                 match o with
-                | Object.Blob _ -> Header.Blob contents.Length
-                | Object.Tree _ -> Header.Tree contents.Length
-                | Object.Commit _ -> Header.Commit contents.Length
+                | Object.Blob _ -> ObjectType.Blob, contents.Length
+                | Object.Tree _ -> ObjectType.Tree, contents.Length
+                | Object.Commit _ -> ObjectType.Commit, contents.Length
+                | Object.Tag _ -> ObjectType.Tag, contents.Length
             Content = contents
         }
 
     let decode (e : EncodedObject) : Git.Object =
         match e.Header with
-        | Header.Tree _ -> Tree.decode e.Content |> Object.Tree
-        | Header.Blob _ -> Blob.decode e.Content |> Object.Blob
-        | Header.Commit _ -> Commit.decode e.Content |> Object.Commit
+        | ObjectType.Tree, _ -> Tree.decode e.Content |> Object.Tree
+        | ObjectType.Blob, _ -> Blob.decode e.Content |> Object.Blob
+        | ObjectType.Commit, _ -> Commit.decode e.Content |> Object.Commit
+        | ObjectType.Tag, _ -> Tag.decode e.Content |> Object.Tag
 
     let hash (o : EncodedObject) : Hash =
         use hasher = SHA1.Create ()
@@ -76,11 +79,7 @@ module EncodedObject =
         use r = new BinaryReader (ms)
         let header = consumeHeader r
 
-        let expectedLength =
-            match header with
-            | Header.Blob i -> i
-            | Header.Tree i -> i
-            | Header.Commit i -> i
+        let expectedLength = snd header
 
         let result =
             {

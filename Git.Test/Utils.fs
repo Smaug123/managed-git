@@ -116,6 +116,7 @@ module Utils =
                 CommitMessage = "First commit\n"
                 Parents = []
                 Tree = tree1
+                GpgSignature = None
             }
             |> Object.Commit
 
@@ -134,6 +135,7 @@ module Utils =
                 Author = scott
                 CommitMessage = "Second commit\n"
                 Parents = [ c1Hash ]
+                GpgSignature = None
                 Tree = tree2
             }
             |> Object.Commit
@@ -154,6 +156,7 @@ module Utils =
                 CommitMessage = "Third commit\n"
                 Parents = [ c2Hash ]
                 Tree = tree3
+                GpgSignature = None
             }
             |> Object.Commit
 

@@ -120,12 +120,11 @@ module PackFile =
         | Delta of Preamble * data : byte[]
 
     /// If this was the last object, i.e. if untilPos was None, returns the 20-byte footer.
-    /// TODO fix up the domain so that the None case is a separate function
     let private parseObject
         (untilPos : uint64 option)
         (expectedCrc : uint32)
         (s : Stream)
-        : ParsedPackObject * PackObjectMetadata * byte[] option
+        : ParsedPackObject * PackObjectMetadata
         =
         let startingOffset = s.Position |> uint64
         let firstByte = s.ReadByte ()
@@ -158,13 +157,12 @@ module PackFile =
                 (Preamble.BaseObjectName name, None) |> Some
             | _ -> None
 
-        let object, footer =
+        let object =
             match untilPos with
             | None ->
                 let finalObjectAndFooter = Stream.consumeToEnd s
 
-                finalObjectAndFooter.[0 .. finalObjectAndFooter.Length - 21],
-                Some finalObjectAndFooter.[finalObjectAndFooter.Length - 20 ..]
+                finalObjectAndFooter.[0 .. finalObjectAndFooter.Length - 21]
             | Some untilPos ->
                 let numToConsume =
                     if untilPos < uint64 s.Position then
@@ -177,7 +175,7 @@ module PackFile =
 
                 let numToConsume = int numToConsume
 
-                Stream.consume s numToConsume, None
+                Stream.consume s numToConsume
 
         // TODO - check CRCs, this is currently failing
         //let obtainedCrc = Crc32Algorithm.Compute (object)
@@ -235,7 +233,7 @@ module PackFile =
                 failwith "Logic error in this library, got no preamble for a delta type"
             | _, _ -> failwith "Unexpected object type"
 
-        toRet, packObjectMetadata, footer
+        toRet, packObjectMetadata
 
     type private HeaderMetadata =
         {
@@ -265,10 +263,7 @@ module PackFile =
             NumberOfObjects = numberOfObjects
         }
 
-    let private resolveDeltas
-        (packs : (Hash * uint64 * (ParsedPackObject * PackObjectMetadata * byte[] option)) array)
-        : PackObject[]
-        =
+    let private resolveDeltas (packs : (Hash * uint64 * (ParsedPackObject * PackObjectMetadata)) array) : PackObject[] =
         let packsByOffset =
             packs
             |> Seq.map (fun (hash, offset, data) -> offset, (hash, data))
@@ -285,7 +280,7 @@ module PackFile =
             | ParsedPackObject.Delta (deltaType, diff) ->
                 match deltaType with
                 | Preamble.BaseObjectName name ->
-                    let _, (derivedObject, derivedMetadata, _) =
+                    let _, (derivedObject, derivedMetadata) =
                         match Map.tryFind name packsByHash with
                         | Some x -> x
                         | None -> failwithf "Could not find object %s in pack file" (Hash.toString name)
@@ -299,7 +294,7 @@ module PackFile =
 
                         metadata.OffsetInPackFile - offset
 
-                    let derivedName, (derivedObject, derivedMetadata, _) =
+                    let derivedName, (derivedObject, derivedMetadata) =
                         match Map.tryFind absolutePosition packsByOffset with
                         | None ->
                             failwithf
@@ -314,7 +309,7 @@ module PackFile =
                     |> PackObject.Delta
 
         packs
-        |> Array.map (fun (name, _, (parsed, metadata, _)) -> resolve parsed name metadata)
+        |> Array.map (fun (name, _, (parsed, metadata)) -> resolve parsed name metadata)
 
     let readAll (file : IFileInfo) (index : PackIndex) =
         let header = readAndValidateHeader file
@@ -601,7 +596,7 @@ module PackFile =
 
         packFile.Seek (index, SeekOrigin.Begin) |> ignore
 
-        let object, metadata, _ =
+        let object, metadata =
             // TODO constrain where we're reading to, and find the CRC
             parseObject (Some (uint64 packFile.Length)) 0u packFile
 

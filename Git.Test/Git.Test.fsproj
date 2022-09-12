@@ -17,6 +17,7 @@
 
     <ItemGroup>
         <Compile Include="Resource.fs" />
+        <Compile Include="Printer.fs" />
         <Compile Include="TestInit.fs" />
         <Compile Include="TestBlob.fs" />
         <Compile Include="TestTree.fs" />

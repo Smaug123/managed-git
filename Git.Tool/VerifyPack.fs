@@ -1,6 +1,5 @@
 namespace Git.Tool
 
-open System.Collections.Generic
 open Git
 
 type PackVerificationLine =

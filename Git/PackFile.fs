@@ -142,15 +142,16 @@ module PackFile =
         let preamble =
             match objectType with
             | PackObjectType.ObjOfsDelta ->
-                // Require 47027985, started at position 47149779, need offset of 121794
-                readDeltaEncodedInt s
-                |> fst
-                |> Preamble.Offset
+                let offset, bytes =
+                    readDeltaEncodedInt s
+                (Preamble.Offset offset, Some bytes)
                 |> Some
             | PackObjectType.ObjRefDelta ->
-                Stream.consume s 20
-                |> Hash.ofBytes
-                |> Preamble.BaseObjectName
+                let name =
+                    Stream.consume s 20
+                    |> Hash.ofBytes
+
+                (Preamble.BaseObjectName name, None)
                 |> Some
             | _ -> None
 
@@ -188,7 +189,13 @@ module PackFile =
 
         let packObjectMetadata =
             {
-                SizeCompressed = uint64 object.LongLength
+                SizeCompressed =
+                    let size =
+                        uint64 object.LongLength + uint64 header.Length
+                    match preamble with
+                    | None
+                    | Some (_, None) -> size
+                    | Some (_, Some bytes) -> size + uint64 bytes.LongLength
                 SizeUncompressed = size
                 OffsetInPackFile = startingOffset
             }
@@ -206,8 +213,8 @@ module PackFile =
                 Tree.decode decompressedObject
                 |> Object.Tree
                 |> ParsedPackObject.Object
-            | PackObjectType.ObjOfsDelta, Some preamble -> ParsedPackObject.Delta (preamble, decompressedObject)
-            | PackObjectType.ObjRefDelta, Some preamble -> ParsedPackObject.Delta (preamble, decompressedObject)
+            | PackObjectType.ObjOfsDelta, Some (preamble, _) -> ParsedPackObject.Delta (preamble, decompressedObject)
+            | PackObjectType.ObjRefDelta, Some (preamble, _) -> ParsedPackObject.Delta (preamble, decompressedObject)
             | PackObjectType.ObjTag, None ->
                 Tag.decode decompressedObject
                 |> Object.Tag

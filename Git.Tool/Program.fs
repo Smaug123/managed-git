@@ -10,10 +10,12 @@ module Program =
     [<EntryPoint>]
     let main args =
         let fs = FileSystem ()
+
         let repo =
             Directory.GetCurrentDirectory ()
             |> fs.DirectoryInfo.FromDirectoryName
             |> Repository.make
+
         match repo with
         | None -> failwith "not in a git repo"
         | Some repo ->
@@ -23,5 +25,4 @@ module Program =
             let verification = VerifyPack.verify repo path
             printfn "%s" (string<PackVerification> verification)
             0
-        | _ ->
-            failwith "unrecognised args"
+        | _ -> failwith "unrecognised args"

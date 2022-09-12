@@ -43,5 +43,6 @@ module TestPack =
         let expected =
             Resource.get "verify-pack.txt"
             |> Encoding.ASCII.GetString
+            |> fun s -> s.ReplaceLineEndings ("\n")
 
         verification.ToString () |> shouldEqual expected

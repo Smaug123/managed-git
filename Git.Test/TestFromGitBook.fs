@@ -375,7 +375,7 @@ module TestFromGitBook =
         |> Reference.write repo "master"
         |> shouldEqual { Was = None ; Now = c3Hash }
 
-        Object.disambiguate repo "1513b1"
+        RevParse.disambiguateLoose repo "1513b1"
         |> List.exactlyOne
         |> Reference.write repo "test"
         |> shouldEqual { Was = None ; Now = c2Hash }
@@ -396,4 +396,4 @@ module TestFromGitBook =
         |> shouldEqual (Ok (SymbolicRefTarget "refs/heads/test"))
 
         SymbolicReference.lookup repo SymbolicRef.FetchHead
-        |> shouldEqual (Error RefDidNotExist)
+        |> shouldEqual (Error (RefDidNotExist SymbolicRef.FetchHead))

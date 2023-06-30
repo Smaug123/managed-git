@@ -1,5 +1,7 @@
 namespace Git
 
+open System.IO
+
 
 type ReferenceUpdate = { Was : Hash option ; Now : Hash }
 
@@ -11,16 +13,11 @@ module Reference =
             |> r.Fs.FileInfo.FromFileName
 
         let was =
-            if refFile.Exists then
-                r.Fs.File.ReadAllText refFile.FullName
-                |> Hash.ofString
-                |> Some
-            else
-                do
-                    use _v = refFile.Create ()
-                    ()
-
+            try
+                r.Fs.File.ReadAllText refFile.FullName |> Some
+            with :? FileNotFoundException ->
                 None
+            |> Option.map Hash.ofString
 
         r.Fs.File.WriteAllText (refFile.FullName, hash.ToString ())
         { Was = was ; Now = hash }
@@ -30,10 +27,9 @@ module Reference =
             r.Fs.Path.Combine ((Repository.refDir r).FullName, "heads", name)
             |> r.Fs.FileInfo.FromFileName
 
-        if refFile.Exists then
-            Some (
-                r.Fs.File.ReadAllText refFile.FullName
-                |> Hash.ofString
-            )
-        else
+        try
+            r.Fs.File.ReadAllText refFile.FullName
+            |> Hash.ofString
+            |> Some
+        with :? FileNotFoundException ->
             None

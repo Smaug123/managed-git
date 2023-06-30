@@ -4,13 +4,14 @@ open System
 open System.IO.Abstractions.TestingHelpers
 open System.Runtime.InteropServices
 open System.Text
+open FsCheck
 open NUnit.Framework
 open FsUnitTyped
-open FsCheck
 open Git
+open Git.Commands
 
 [<TestFixture>]
-module TestObject =
+module TestRevParse =
 
     let private intToChar (i : int) (upper : bool) : char =
         if i < 10 then
@@ -68,9 +69,9 @@ module TestObject =
                     expected.StartsWith prefix
 
             if isMatch then
-                Object.disambiguate repo prefix = [ expectedHash ]
+                RevParse.disambiguateLoose repo prefix = [ expectedHash ]
             else
-                Object.disambiguate repo prefix = []
+                RevParse.disambiguateLoose repo prefix = []
 
         property
         |> Prop.forAll (Arb.fromGen (hashPrefixGenerator 40uy))

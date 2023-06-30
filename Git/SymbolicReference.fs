@@ -1,5 +1,6 @@
 namespace Git
 
+open System.IO
 open System.IO.Abstractions
 
 /// The target of a symbolic reference, e.g. "refs/heads/blah".
@@ -34,8 +35,14 @@ module SymbolicRef =
             |> r.Fs.FileInfo.FromFileName
 
 type SymbolicRefLookupError =
-    | RefDidNotExist
-    | MalformedRef of string
+    | RefDidNotExist of SymbolicRef
+    | MalformedRef of SymbolicRef * string
+
+    override this.ToString () =
+        match this with
+        | SymbolicRefLookupError.RefDidNotExist s -> sprintf "Symbolic ref %s did not exist" (string<SymbolicRef> s)
+        | SymbolicRefLookupError.MalformedRef (ref, contents) ->
+            sprintf "Symbolic ref %s had malformed contents: %s" (string<SymbolicRef> ref) contents
 
 [<RequireQualifiedAccess>]
 module SymbolicReference =
@@ -44,15 +51,19 @@ module SymbolicReference =
     let lookup (r : Repository) (name : SymbolicRef) : Result<SymbolicRefTarget, SymbolicRefLookupError> =
         let f = SymbolicRef.getFile r name
 
-        if not <| f.Exists then
-            Error RefDidNotExist
-        else
-            r.Fs.File.ReadAllText f.FullName
-            |> fun contents ->
-                if contents.Substring (0, 5) = "ref: " then
-                    contents.Substring 5 |> SymbolicRefTarget |> Ok
-                else
-                    Error (MalformedRef contents)
+        let text =
+            try
+                r.Fs.File.ReadAllText f.FullName |> Ok
+            with :? FileNotFoundException ->
+                Error (RefDidNotExist name)
+
+        text
+        |> Result.bind (fun contents ->
+            if contents.Substring (0, 5) = "ref: " then
+                contents.Substring 5 |> SymbolicRefTarget |> Ok
+            else
+                Error (MalformedRef (name, contents))
+        )
 
     let write (r : Repository) (name : SymbolicRef) (contents : string) : unit =
         if not <| contents.StartsWith "refs/" then

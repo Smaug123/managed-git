@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net7.0</TargetFramework>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
@@ -18,15 +18,16 @@
     <ItemGroup>
         <Compile Include="Resource.fs" />
         <Compile Include="Printer.fs" />
+        <Compile Include="TestString.fs" />
         <Compile Include="TestInit.fs" />
         <Compile Include="TestBlob.fs" />
         <Compile Include="TestTree.fs" />
         <Compile Include="TestFromGitBook.fs" />
         <Compile Include="Utils.fs" />
         <Compile Include="TestCommit.fs" />
-        <Compile Include="TestObject.fs" />
         <Compile Include="TestLog.fs" />
         <Compile Include="TestPack.fs" />
+        <Compile Include="TestRevParse.fs" />
         <EmbeddedResource Include="pack-fd1ac4dab39afd8713d495c8bc30ae9ea6157eea.idx" />
         <EmbeddedResource Include="pack-fd1ac4dab39afd8713d495c8bc30ae9ea6157eea.pack" />
         <EmbeddedResource Include="verify-pack.txt" />

@@ -623,3 +623,23 @@ module PackFile =
         use index = packIndex.OpenRead ()
         use file = packFile.OpenRead ()
         locateObjectInStream h index file
+
+    /// Get all the pack files in this repository.
+    /// The resulting hash is a hash that can be interpolated into e.g. `id-%s.pack`,
+    /// or passed straight into `VerifyPack.verify`.
+    let allPacks (repo : Repository) : (Hash * IFileInfo) seq =
+        let gitDir = Repository.gitDir repo
+        let fs = repo.Fs
+
+        fs.Path.Combine (gitDir.FullName, "objects", "pack")
+        |> fs.DirectoryInfo.FromDirectoryName
+        |> fun di -> di.EnumerateFiles "*.pack"
+        |> Seq.map (fun fi ->
+            let hash =
+                fi.FullName
+                |> String.chopStart "id-"
+                |> String.chopEnd ".pack"
+                |> Hash.ofString
+
+            hash, fi
+        )

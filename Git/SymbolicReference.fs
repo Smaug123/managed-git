@@ -1,5 +1,6 @@
 namespace Git
 
+open System
 open System.IO
 open System.IO.Abstractions
 
@@ -44,6 +45,13 @@ type SymbolicRefLookupError =
         | SymbolicRefLookupError.MalformedRef (ref, contents) ->
             sprintf "Symbolic ref %s had malformed contents: %s" (string<SymbolicRef> ref) contents
 
+type SymbolicRefWriteError =
+    | PointingOutsideRefs of SymbolicRef
+
+    override this.ToString () =
+        match this with
+        | SymbolicRefWriteError.PointingOutsideRefs ref -> sprintf "refusing to point %O outside of refs/" ref
+
 [<RequireQualifiedAccess>]
 module SymbolicReference =
 
@@ -59,16 +67,24 @@ module SymbolicReference =
 
         text
         |> Result.bind (fun contents ->
-            if contents.Substring (0, 5) = "ref: " then
-                contents.Substring 5 |> SymbolicRefTarget |> Ok
-            else
+            if not (contents.StartsWith ("ref: ", StringComparison.Ordinal)) then
                 Error (MalformedRef (name, contents))
+            elif not (contents.EndsWith ("\n", StringComparison.Ordinal)) then
+                Error (MalformedRef (name, contents))
+            else
+                // Omit the trailing newline
+                contents.Substring (5, contents.Length - 6) |> SymbolicRefTarget |> Ok
         )
 
-    let write (r : Repository) (name : SymbolicRef) (contents : string) : unit =
-        if not <| contents.StartsWith "refs/" then
-            failwithf "refusing to point %O outside of refs/" name
+    let write (r : Repository) (name : SymbolicRef) (contents : string) : Result<unit, SymbolicRefWriteError> =
+        if not <| contents.StartsWith ("refs/", StringComparison.Ordinal) then
+            Error (SymbolicRefWriteError.PointingOutsideRefs name)
 
-        r.Fs.File.WriteAllText ((SymbolicRef.getFile r name).FullName, sprintf "ref: %s" contents)
+        else
 
-    let delete (r : Repository) (name : SymbolicRef) : unit = (SymbolicRef.getFile r name).Delete ()
+        r.Fs.File.WriteAllText ((SymbolicRef.getFile r name).FullName, sprintf "ref: %s\n" contents)
+        Ok ()
+
+    let delete (r : Repository) (name : SymbolicRef) : unit =
+        let underlyingFile = SymbolicRef.getFile r name
+        underlyingFile.Delete ()

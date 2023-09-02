@@ -22,9 +22,9 @@
         <Compile Include="Object.fs" />
         <Compile Include="PackFile.fs" />
         <Compile Include="VerifyPack.fs" />
-        <Compile Include="RevParse.fs" />
         <Compile Include="EncodedObject.fs" />
         <Compile Include="Reference.fs" />
+        <Compile Include="RevParse.fs" />
         <Compile Include="SymbolicReference.fs" />
         <Compile Include="Commands\Printer.fs" />
         <Compile Include="Commands\Log.fs" />

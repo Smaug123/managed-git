@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Include="Result.fs" />
         <Compile Include="Resource.fs" />
         <Compile Include="Printer.fs" />
         <Compile Include="TestString.fs" />

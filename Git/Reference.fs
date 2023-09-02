@@ -1,5 +1,6 @@
 namespace Git
 
+open System
 open System.IO
 
 
@@ -31,11 +32,26 @@ module Reference =
         }
 
     let lookup (r : Repository) (name : string) : Hash option =
-        let refFile =
-            r.Fs.Path.Combine ((Repository.refDir r).FullName, "heads", name)
-            |> r.Fs.FileInfo.FromFileName
+        let lookup (name : string) =
+            let refFile =
+                r.Fs.Path.Combine ((Repository.gitDir r).FullName, name)
+                |> r.Fs.FileInfo.FromFileName
 
-        try
-            r.Fs.File.ReadAllText refFile.FullName |> Hash.ofString |> Some
-        with :? FileNotFoundException ->
-            None
+            try
+                r.Fs.File.ReadAllText refFile.FullName
+                |> String.chopEnd "\n"
+                |> Hash.ofString
+                |> Some
+            with
+            | :? FileNotFoundException
+            | :? DirectoryNotFoundException -> None
+
+        seq {
+            yield name
+            yield r.Fs.Path.Combine ("refs", name)
+            yield r.Fs.Path.Combine ("refs", "tags", name)
+            yield r.Fs.Path.Combine ("refs", "heads", name)
+            yield r.Fs.Path.Combine ("refs", "remotes", name)
+            yield r.Fs.Path.Combine ("refs", "remotes", name, "HEAD")
+        }
+        |> Seq.tryPick lookup

@@ -327,7 +327,7 @@ module TestFromGitBook =
                 Now = c3Hash
             }
 
-        RevParse.disambiguateLoose repo "1513b1"
+        RevParse.disambiguateLooseHash repo "1513b1"
         |> List.exactlyOne
         |> Reference.write repo "test"
         |> shouldEqual
@@ -336,16 +336,18 @@ module TestFromGitBook =
                 Now = c2Hash
             }
 
-        let exn =
-            Assert.Throws<Exception> (fun () -> SymbolicReference.write repo SymbolicRef.Head "test")
+        let error = SymbolicReference.write repo SymbolicRef.Head "test" |> Result.getError
 
-        exn.Message |> shouldEqual "refusing to point HEAD outside of refs/"
+        error
+        |> shouldEqual (SymbolicRefWriteError.PointingOutsideRefs SymbolicRef.Head)
 
-        SymbolicReference.write repo SymbolicRef.Head "refs/heads/test"
+        error.ToString () |> shouldEqual "refusing to point HEAD outside of refs/"
+
+        SymbolicReference.write repo SymbolicRef.Head "refs/heads/test" |> Result.get
 
         repo.Fs.Path.Combine ((Repository.gitDir repo).FullName, "HEAD")
         |> repo.Fs.File.ReadAllText
-        |> shouldEqual "ref: refs/heads/test"
+        |> shouldEqual "ref: refs/heads/test\n"
 
         SymbolicReference.lookup repo SymbolicRef.Head
         |> shouldEqual (Ok (SymbolicRefTarget "refs/heads/test"))

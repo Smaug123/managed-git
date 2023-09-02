@@ -17,7 +17,7 @@ type BranchCreationError =
 module Branch =
 
     let create (r : Repository) (name : string) (baseRef : string) =
-        match RevParse.parse r baseRef with
+        match Commands.RevParse.parse r baseRef with
         | Ok ref -> Reference.write r name ref |> Ok
         | Error (e : RevParseError) ->
             // TODO: find out what Git does here

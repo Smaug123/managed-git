@@ -7,7 +7,7 @@ open System.IO
 module RevParse =
 
     /// Get the object hashes which match this start, from among the loose objects.
-    let disambiguateLoose (r : Repository) (startOfHash : string) : Hash list =
+    let disambiguateLooseHash (r : Repository) (startOfHash : string) : Hash list =
         let objectDir = Repository.objectDir r
 
         match startOfHash.Length with
@@ -51,5 +51,15 @@ module RevParse =
         |> Seq.map Hash.ofString
         |> List.ofSeq
 
-//let disambiguatePacked (r : Repository) (startOfHash : string) : Hash list =
+    let rec parse (repo : Repository) (s : string) : Hash list =
+        match s with
+        | "@" -> parse repo "HEAD"
+        | _ ->
+
+        let fromBranchName = Reference.lookup repo s
+        let fromHash = disambiguateLooseHash repo s
+
+        Option.toList fromBranchName @ fromHash
+
+//let disambiguatePackedHash (r : Repository) (startOfHash : string) : Hash list =
 //    let packs = PackFile.allPacks r

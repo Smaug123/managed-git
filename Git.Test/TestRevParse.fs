@@ -69,9 +69,9 @@ module TestRevParse =
                     expected.StartsWith (prefix, StringComparison.Ordinal)
 
             if isMatch then
-                RevParse.disambiguateLoose repo prefix = [ expectedHash ]
+                RevParse.disambiguateLooseHash repo prefix = [ expectedHash ]
             else
-                RevParse.disambiguateLoose repo prefix = []
+                RevParse.disambiguateLooseHash repo prefix = []
 
         property
         |> Prop.forAll (Arb.fromGen (hashPrefixGenerator 40uy))

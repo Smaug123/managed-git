@@ -16,11 +16,7 @@ type RevParseError =
 module RevParse =
 
     let rec parse (r : Repository) (s : string) : Result<Hash, RevParseError> =
-        if s = "@" then
-            parse r "HEAD"
-        else
-
-        match RevParse.disambiguateLoose r s with
+        match RevParse.parse r s with
         | [ s ] -> Ok s
         | (_ :: _ :: _) as matches -> Error (RevParseError.MultipleMatches (s, matches))
         | [] -> Error (RevParseError.Unrecognised s)

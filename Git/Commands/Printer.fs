@@ -1,8 +1,13 @@
 namespace Git.Commands
 
-type Printer = { WriteLine : string -> unit }
+type Printer =
+    {
+        WriteLine : string -> unit
+    }
 
 [<RequireQualifiedAccess>]
 module Printer =
     let make () =
-        { WriteLine = System.Console.WriteLine }
+        {
+            WriteLine = System.Console.WriteLine
+        }

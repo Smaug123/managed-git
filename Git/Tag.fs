@@ -38,35 +38,28 @@ module Tag =
         use ms = new MemoryStream (file)
 
         let objectHash =
-            Parse.consumeWord "tag" (OneOf [ "object" ]) ms
-            |> ignore
+            Parse.consumeWord "tag" (OneOf [ "object" ]) ms |> ignore
 
             match Stream.consumeTo ms (byte '\n') with
             | None -> failwith "Tag object should have had a newline in"
             | Some h -> h |> Hash.ofSpelling
 
         let typeReferredTo =
-            Parse.consumeWord "tag" (OneOf [ "type" ]) ms
-            |> ignore
+            Parse.consumeWord "tag" (OneOf [ "type" ]) ms |> ignore
 
             match Stream.consumeTo ms (byte '\n') with
             | None -> failwith "Tag type should have had a newline in"
-            | Some h ->
-                h
-                |> Encoding.ASCII.GetString
-                |> TaggedObjectType.Parse
+            | Some h -> h |> Encoding.ASCII.GetString |> TaggedObjectType.Parse
 
         let tagName =
-            Parse.consumeWord "tag" (OneOf [ "tag" ]) ms
-            |> ignore
+            Parse.consumeWord "tag" (OneOf [ "tag" ]) ms |> ignore
 
             match Stream.consumeTo ms (byte '\n') with
             | None -> failwith "Tag name should have had a newline in"
             | Some t -> t |> Encoding.ASCII.GetString
 
         let tagger =
-            Parse.consumeWord "tag" (OneOf [ "tagger" ]) ms
-            |> ignore
+            Parse.consumeWord "tag" (OneOf [ "tagger" ]) ms |> ignore
 
             Parse.consumePerson "tagger" ms
 

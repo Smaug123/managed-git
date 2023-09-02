@@ -3,7 +3,11 @@ namespace Git
 open System.IO
 
 
-type ReferenceUpdate = { Was : Hash option ; Now : Hash }
+type ReferenceUpdate =
+    {
+        Was : Hash option
+        Now : Hash
+    }
 
 [<RequireQualifiedAccess>]
 module Reference =
@@ -20,7 +24,11 @@ module Reference =
             |> Option.map Hash.ofString
 
         r.Fs.File.WriteAllText (refFile.FullName, hash.ToString ())
-        { Was = was ; Now = hash }
+
+        {
+            Was = was
+            Now = hash
+        }
 
     let lookup (r : Repository) (name : string) : Hash option =
         let refFile =
@@ -28,8 +36,6 @@ module Reference =
             |> r.Fs.FileInfo.FromFileName
 
         try
-            r.Fs.File.ReadAllText refFile.FullName
-            |> Hash.ofString
-            |> Some
+            r.Fs.File.ReadAllText refFile.FullName |> Hash.ofString |> Some
         with :? FileNotFoundException ->
             None

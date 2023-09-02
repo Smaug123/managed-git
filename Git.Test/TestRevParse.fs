@@ -64,9 +64,9 @@ module TestRevParse =
             let isMatch =
                 if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
                     // Windows filesystem is case-insensitive
-                    expected.StartsWith (prefix, StringComparison.InvariantCultureIgnoreCase)
+                    expected.StartsWith (prefix, StringComparison.OrdinalIgnoreCase)
                 else
-                    expected.StartsWith prefix
+                    expected.StartsWith (prefix, StringComparison.Ordinal)
 
             if isMatch then
                 RevParse.disambiguateLoose repo prefix = [ expectedHash ]
@@ -78,9 +78,6 @@ module TestRevParse =
         |> Check.QuickThrowOnFailure
 
         for subStringEnd in 0 .. expected.Length - 1 do
-            property expected.[0..subStringEnd]
-            |> shouldEqual true
+            property expected.[0..subStringEnd] |> shouldEqual true
 
-            expected.[0..subStringEnd].ToUpperInvariant ()
-            |> property
-            |> shouldEqual true
+            expected.[0..subStringEnd].ToUpperInvariant () |> property |> shouldEqual true

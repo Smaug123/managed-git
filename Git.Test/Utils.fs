@@ -16,8 +16,7 @@ module Utils =
             |> EncodedObject.encode
             |> EncodedObject.write repo
 
-        h1
-        |> shouldEqual (Hash.ofString "83baae61804e65cc73a7201a7252750c76066a30")
+        h1 |> shouldEqual (Hash.ofString "83baae61804e65cc73a7201a7252750c76066a30")
 
         let h2 =
             "version 2\n"
@@ -26,8 +25,7 @@ module Utils =
             |> EncodedObject.encode
             |> EncodedObject.write repo
 
-        h2
-        |> shouldEqual (Hash.ofString "1f7a7a472abf3dd9643fd615f6da379c4acb3e3a")
+        h2 |> shouldEqual (Hash.ofString "1f7a7a472abf3dd9643fd615f6da379c4acb3e3a")
 
         // Add to the tree
         let tree1 =
@@ -42,8 +40,7 @@ module Utils =
             |> EncodedObject.encode
             |> EncodedObject.write repo
 
-        tree1
-        |> shouldEqual (Hash.ofString "d8329fc1cc938780ffdd9f94e0d364e0ea74f579")
+        tree1 |> shouldEqual (Hash.ofString "d8329fc1cc938780ffdd9f94e0d364e0ea74f579")
 
         let newHash =
             "new file\n"
@@ -72,8 +69,7 @@ module Utils =
             |> EncodedObject.encode
             |> EncodedObject.write repo
 
-        tree2
-        |> shouldEqual (Hash.ofString "0155eb4229851634a0f03eb265b69f5a2d56f341")
+        tree2 |> shouldEqual (Hash.ofString "0155eb4229851634a0f03eb265b69f5a2d56f341")
 
         // and the prefix one
         let tree3 =
@@ -98,8 +94,7 @@ module Utils =
             |> EncodedObject.encode
             |> EncodedObject.write repo
 
-        tree3
-        |> shouldEqual (Hash.ofString "3c4e9cd789d88d8d89c1073707c3585e41b0e614")
+        tree3 |> shouldEqual (Hash.ofString "3c4e9cd789d88d8d89c1073707c3585e41b0e614")
 
         let scott =
             {
@@ -120,10 +115,7 @@ module Utils =
             }
             |> Object.Commit
 
-        let c1Hash =
-            commit1
-            |> EncodedObject.encode
-            |> EncodedObject.write repo
+        let c1Hash = commit1 |> EncodedObject.encode |> EncodedObject.write repo
 
         c1Hash
         |> Hash.toString
@@ -140,10 +132,7 @@ module Utils =
             }
             |> Object.Commit
 
-        let c2Hash =
-            commit2
-            |> EncodedObject.encode
-            |> EncodedObject.write repo
+        let c2Hash = commit2 |> EncodedObject.encode |> EncodedObject.write repo
 
         c2Hash
         |> Hash.toString
@@ -160,10 +149,7 @@ module Utils =
             }
             |> Object.Commit
 
-        let c3Hash =
-            commit3
-            |> EncodedObject.encode
-            |> EncodedObject.write repo
+        let c3Hash = commit3 |> EncodedObject.encode |> EncodedObject.write repo
 
         c3Hash
         |> Hash.toString

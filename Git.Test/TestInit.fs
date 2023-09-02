@@ -25,5 +25,4 @@ module TestInit =
             | Ok r -> r
             | Error r -> failwithf "Failed to init repo: %+A" r
 
-        Repository.init (BranchName "main") gitDir
-        |> shouldEqual (Error AlreadyGit)
+        Repository.init (BranchName "main") gitDir |> shouldEqual (Error AlreadyGit)

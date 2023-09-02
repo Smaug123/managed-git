@@ -55,8 +55,7 @@ module TestTree =
         b |> EncodedObject.write repo |> ignore
 
         let backIn =
-            EncodedObject.catFile repo (EncodedObject.hash b)
-            |> EncodedObject.decode
+            EncodedObject.catFile repo (EncodedObject.hash b) |> EncodedObject.decode
 
         match backIn with
         | Object.Tree entries -> entries |> shouldEqual t

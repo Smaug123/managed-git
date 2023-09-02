@@ -13,10 +13,7 @@ module Log =
                 yield!
                     c.Parents
                     |> List.map (fun i ->
-                        match
-                            EncodedObject.catFile repo i
-                            |> EncodedObject.decode
-                        with
+                        match EncodedObject.catFile repo i |> EncodedObject.decode with
                         | Object.Commit c -> (i, c)
                         | s -> failwithf "Not a commit: %O (%+A)" i s
                     )

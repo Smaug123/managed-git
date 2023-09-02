@@ -4,7 +4,7 @@ open System.IO
 open System.IO.Abstractions
 
 /// The target of a symbolic reference, e.g. "refs/heads/blah".
-type SymbolicRefTarget = SymbolicRefTarget of string
+type SymbolicRefTarget = | SymbolicRefTarget of string
 
 type SymbolicRef =
     | CherryPickHead

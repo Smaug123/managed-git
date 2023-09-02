@@ -24,8 +24,7 @@ module TestString =
 
         Check.QuickThrowOnFailure property
 
-        badCount.Value
-        |> shouldBeSmallerThan goodCount.Value
+        badCount.Value |> shouldBeSmallerThan goodCount.Value
 
         goodCount.Value |> shouldBeGreaterThan 10
 
@@ -44,9 +43,7 @@ module TestString =
     [<Test>]
     let ``chopStart chops the initial`` () =
         let property (NonNull toChop) (NonNull from : NonNull<string>) : bool =
-            (toChop + from)
-            |> String.chopStart toChop
-            |> (=) from
+            (toChop + from) |> String.chopStart toChop |> (=) from
 
         Check.QuickThrowOnFailure property
 
@@ -65,8 +62,7 @@ module TestString =
 
         Check.QuickThrowOnFailure property
 
-        badCount.Value
-        |> shouldBeSmallerThan goodCount.Value
+        badCount.Value |> shouldBeSmallerThan goodCount.Value
 
         goodCount.Value |> shouldBeGreaterThan 10
 
@@ -85,8 +81,6 @@ module TestString =
     [<Test>]
     let ``chopEnd chops the final`` () =
         let property (NonNull toChop) (NonNull from : NonNull<string>) : bool =
-            (from + toChop)
-            |> String.chopEnd toChop
-            |> (=) from
+            (from + toChop) |> String.chopEnd toChop |> (=) from
 
         Check.QuickThrowOnFailure property

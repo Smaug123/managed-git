@@ -34,24 +34,14 @@ module internal Header =
             match s.[0] with
             | 98uy ->
                 // 'b', then "lob "
-                if
-                    s.[1] = 108uy
-                    && s.[2] = 111uy
-                    && s.[3] = 98uy
-                    && s.[4] = 32uy
-                then
+                if s.[1] = 108uy && s.[2] = 111uy && s.[3] = 98uy && s.[4] = 32uy then
                     let number = parseIntFromAsciiBytes 5 s
                     (ObjectType.Blob, number) |> Some
                 else
                     None
             | 116uy ->
                 // 't', then "ree "
-                if
-                    s.[1] = 114uy
-                    && s.[2] = 101uy
-                    && s.[3] = 101uy
-                    && s.[4] = 32uy
-                then
+                if s.[1] = 114uy && s.[2] = 101uy && s.[3] = 101uy && s.[4] = 32uy then
                     let number = parseIntFromAsciiBytes 5 s
                     (ObjectType.Tree, number) |> Some
                 else

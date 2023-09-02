@@ -11,10 +11,7 @@ type PackVerificationLine =
         let typeString = string<ObjectType> this.Type
 
         let padding =
-            Array.create
-                (ObjectType.Commit.ToString().Length
-                 - typeString.Length)
-                " "
+            Array.create (ObjectType.Commit.ToString().Length - typeString.Length) " "
             |> String.concat ""
 
         sprintf "%s %s%s %s" (Hash.toString this.Object) typeString padding (string<PackObjectMetadata> this.Metadata)
@@ -77,16 +74,12 @@ module VerifyPack =
         let id = Hash.toString idHash
 
         let index =
-            fs.Path.Combine (packDir, sprintf "pack-%s.idx" id)
-            |> fs.FileInfo.FromFileName
+            fs.Path.Combine (packDir, sprintf "pack-%s.idx" id) |> fs.FileInfo.FromFileName
 
         let packFile =
-            fs.Path.Combine (packDir, sprintf "pack-%s.pack" id)
-            |> fs.FileInfo.FromFileName
+            fs.Path.Combine (packDir, sprintf "pack-%s.pack" id) |> fs.FileInfo.FromFileName
 
-        let allPacks =
-            PackFile.readIndex index
-            |> PackFile.readAll packFile
+        let allPacks = PackFile.readIndex index |> PackFile.readAll packFile
 
         let rec baseObject (o : PackObject) =
             match o with
@@ -151,9 +144,7 @@ module VerifyPack =
         let maxChainLength = chainCounts |> Map.toSeq |> Seq.last |> fst
 
         let chainCounts =
-            fun length ->
-                Map.tryFind length chainCounts
-                |> Option.defaultValue 0
+            fun length -> Map.tryFind length chainCounts |> Option.defaultValue 0
             |> Array.init (maxChainLength + 1) // for the 0 index
 
         {

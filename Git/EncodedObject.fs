@@ -44,9 +44,7 @@ module EncodedObject =
         hasher.ComputeHash content |> Hash.ofBytes
 
     let private compress (o : EncodedObject) (dest : Stream) : unit =
-        let toWrite =
-            [| Header.toBytes o.Header ; o.Content |]
-            |> Array.concat
+        let toWrite = [| Header.toBytes o.Header ; o.Content |] |> Array.concat
 
         use ms = new MemoryStream (toWrite)
         use ds = new DeflateStream (dest, CompressionMode.Compress)

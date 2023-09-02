@@ -103,8 +103,7 @@ module Commit =
             | Some data when data.[0..6] = Encoding.ASCII.GetBytes "gpgsig " ->
                 let result = StringBuilder ()
 
-                result.Append (Encoding.ASCII.GetString data.[7..])
-                |> ignore
+                result.Append (Encoding.ASCII.GetString data.[7..]) |> ignore
 
                 result.Append '-' |> ignore
 

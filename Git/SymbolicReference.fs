@@ -1,9 +1,11 @@
 namespace Git
 
+open System
+open System.IO
 open System.IO.Abstractions
 
 /// The target of a symbolic reference, e.g. "refs/heads/blah".
-type SymbolicRefTarget = SymbolicRefTarget of string
+type SymbolicRefTarget = | SymbolicRefTarget of string
 
 type SymbolicRef =
     | CherryPickHead
@@ -34,8 +36,21 @@ module SymbolicRef =
             |> r.Fs.FileInfo.FromFileName
 
 type SymbolicRefLookupError =
-    | RefDidNotExist
-    | MalformedRef of string
+    | RefDidNotExist of SymbolicRef
+    | MalformedRef of SymbolicRef * string
+
+    override this.ToString () =
+        match this with
+        | SymbolicRefLookupError.RefDidNotExist s -> sprintf "Symbolic ref %s did not exist" (string<SymbolicRef> s)
+        | SymbolicRefLookupError.MalformedRef (ref, contents) ->
+            sprintf "Symbolic ref %s had malformed contents: %s" (string<SymbolicRef> ref) contents
+
+type SymbolicRefWriteError =
+    | PointingOutsideRefs of SymbolicRef
+
+    override this.ToString () =
+        match this with
+        | SymbolicRefWriteError.PointingOutsideRefs ref -> sprintf "refusing to point %O outside of refs/" ref
 
 [<RequireQualifiedAccess>]
 module SymbolicReference =
@@ -44,20 +59,32 @@ module SymbolicReference =
     let lookup (r : Repository) (name : SymbolicRef) : Result<SymbolicRefTarget, SymbolicRefLookupError> =
         let f = SymbolicRef.getFile r name
 
-        if not <| f.Exists then
-            Error RefDidNotExist
+        let text =
+            try
+                r.Fs.File.ReadAllText f.FullName |> Ok
+            with :? FileNotFoundException ->
+                Error (RefDidNotExist name)
+
+        text
+        |> Result.bind (fun contents ->
+            if not (contents.StartsWith ("ref: ", StringComparison.Ordinal)) then
+                Error (MalformedRef (name, contents))
+            elif not (contents.EndsWith ("\n", StringComparison.Ordinal)) then
+                Error (MalformedRef (name, contents))
+            else
+                // Omit the trailing newline
+                contents.Substring (5, contents.Length - 6) |> SymbolicRefTarget |> Ok
+        )
+
+    let write (r : Repository) (name : SymbolicRef) (contents : string) : Result<unit, SymbolicRefWriteError> =
+        if not <| contents.StartsWith ("refs/", StringComparison.Ordinal) then
+            Error (SymbolicRefWriteError.PointingOutsideRefs name)
+
         else
-            r.Fs.File.ReadAllText f.FullName
-            |> fun contents ->
-                if contents.Substring (0, 5) = "ref: " then
-                    contents.Substring 5 |> SymbolicRefTarget |> Ok
-                else
-                    Error (MalformedRef contents)
 
-    let write (r : Repository) (name : SymbolicRef) (contents : string) : unit =
-        if not <| contents.StartsWith "refs/" then
-            failwithf "refusing to point %O outside of refs/" name
+        r.Fs.File.WriteAllText ((SymbolicRef.getFile r name).FullName, sprintf "ref: %s\n" contents)
+        Ok ()
 
-        r.Fs.File.WriteAllText ((SymbolicRef.getFile r name).FullName, sprintf "ref: %s" contents)
-
-    let delete (r : Repository) (name : SymbolicRef) : unit = (SymbolicRef.getFile r name).Delete ()
+    let delete (r : Repository) (name : SymbolicRef) : unit =
+        let underlyingFile = SymbolicRef.getFile r name
+        underlyingFile.Delete ()

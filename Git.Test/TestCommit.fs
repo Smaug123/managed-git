@@ -40,12 +40,8 @@ module TestCommit =
             }
             |> Object.Commit
 
-        let h =
-            EncodedObject.encode commit1
-            |> EncodedObject.write repo
+        let h = EncodedObject.encode commit1 |> EncodedObject.write repo
 
-        let c =
-            EncodedObject.catFile repo h
-            |> EncodedObject.decode
+        let c = EncodedObject.catFile repo h |> EncodedObject.decode
 
         c |> shouldEqual commit1

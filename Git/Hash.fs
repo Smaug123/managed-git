@@ -48,16 +48,7 @@ module Hash =
             else
                 failwithf "Byte '%i' ('%c') is not a hex digit" b (char b)
 
-        let rec b (pos : int) =
-            seq {
-                if pos < input.Length then
-                    yield value input.[pos] * 16uy + value input.[pos + 1]
-                    yield! b (pos + 2)
-            }
-
-        fun i ->
-            value input.[2 * i] * 16uy
-            + value input.[2 * i + 1]
+        fun i -> value input.[2 * i] * 16uy + value input.[2 * i + 1]
         |> Array.init (input.Length / 2)
         |> ofBytes
 

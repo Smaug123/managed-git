@@ -6,7 +6,7 @@ open System.IO
 open System.Text
 open Microsoft.FSharp.Data.UnitSystems.SI.UnitNames
 
-type OneOf = OneOf of string list
+type OneOf = | OneOf of string list
 
 [<RequireQualifiedAccess>]
 module Parse =
@@ -53,9 +53,7 @@ module Parse =
         w, h
 
     let consumePerson (id : string) (s : Stream) =
-        let name =
-            Stream.consumeTo s (byte '<')
-            |> Option.map Encoding.UTF8.GetString
+        let name = Stream.consumeTo s (byte '<') |> Option.map Encoding.UTF8.GetString
 
         match name with
         | None -> failwithf "No %s name present in object." id
@@ -66,9 +64,7 @@ module Parse =
 
         let name = name.Substring (0, name.Length - 1)
 
-        let email =
-            Stream.consumeTo s (byte '>')
-            |> Option.map Encoding.UTF8.GetString
+        let email = Stream.consumeTo s (byte '>') |> Option.map Encoding.UTF8.GetString
 
         match email with
         | None -> failwithf "No %s email present in object." id
@@ -90,9 +86,7 @@ module Parse =
 
         let timestamp = parseInt timestamp * 1<second>
 
-        let offset =
-            Stream.consumeTo s 10uy
-            |> Option.map Encoding.UTF8.GetString
+        let offset = Stream.consumeTo s 10uy |> Option.map Encoding.UTF8.GetString
 
         match offset with
         | None -> failwithf "Commit object ended before %s timezone" id

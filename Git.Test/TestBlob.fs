@@ -38,13 +38,8 @@ module TestBlob =
         b |> EncodedObject.write repo |> ignore
 
         let backIn =
-            EncodedObject.catFile repo (EncodedObject.hash b)
-            |> EncodedObject.decode
+            EncodedObject.catFile repo (EncodedObject.hash b) |> EncodedObject.decode
 
         match backIn with
-        | Object.Blob b ->
-            b
-            |> Array.map char
-            |> String
-            |> shouldEqual "what is up, doc?"
+        | Object.Blob b -> b |> Array.map char |> String |> shouldEqual "what is up, doc?"
         | _ -> failwithf "Oh no: %+A" backIn

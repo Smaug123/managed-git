@@ -4,13 +4,14 @@ open System
 open System.IO.Abstractions.TestingHelpers
 open System.Runtime.InteropServices
 open System.Text
+open FsCheck
 open NUnit.Framework
 open FsUnitTyped
-open FsCheck
 open Git
+open Git.Commands
 
 [<TestFixture>]
-module TestObject =
+module TestRevParse =
 
     let private intToChar (i : int) (upper : bool) : char =
         if i < 10 then
@@ -63,23 +64,20 @@ module TestObject =
             let isMatch =
                 if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
                     // Windows filesystem is case-insensitive
-                    expected.StartsWith (prefix, StringComparison.InvariantCultureIgnoreCase)
+                    expected.StartsWith (prefix, StringComparison.OrdinalIgnoreCase)
                 else
-                    expected.StartsWith prefix
+                    expected.StartsWith (prefix, StringComparison.Ordinal)
 
             if isMatch then
-                Object.disambiguate repo prefix = [ expectedHash ]
+                RevParse.disambiguateLooseHash repo prefix = [ expectedHash ]
             else
-                Object.disambiguate repo prefix = []
+                RevParse.disambiguateLooseHash repo prefix = []
 
         property
         |> Prop.forAll (Arb.fromGen (hashPrefixGenerator 40uy))
         |> Check.QuickThrowOnFailure
 
         for subStringEnd in 0 .. expected.Length - 1 do
-            property expected.[0..subStringEnd]
-            |> shouldEqual true
+            property expected.[0..subStringEnd] |> shouldEqual true
 
-            expected.[0..subStringEnd].ToUpperInvariant ()
-            |> property
-            |> shouldEqual true
+            expected.[0..subStringEnd].ToUpperInvariant () |> property |> shouldEqual true

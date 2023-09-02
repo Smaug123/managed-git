@@ -4,7 +4,6 @@ open System
 open System.IO
 open System.IO.Abstractions
 open Git.Internals
-open Force.Crc32
 open ICSharpCode.SharpZipLib.Zip.Compression
 open ICSharpCode.SharpZipLib.Zip.Compression.Streams
 
@@ -206,23 +205,13 @@ module PackFile =
 
         let toRet =
             match objectType, preamble with
-            | PackObjectType.ObjBlob, None ->
-                Object.Blob decompressedObject
-                |> ParsedPackObject.Object
+            | PackObjectType.ObjBlob, None -> Object.Blob decompressedObject |> ParsedPackObject.Object
             | PackObjectType.ObjCommit, None ->
-                Commit.decode decompressedObject
-                |> Object.Commit
-                |> ParsedPackObject.Object
-            | PackObjectType.ObjTree, None ->
-                Tree.decode decompressedObject
-                |> Object.Tree
-                |> ParsedPackObject.Object
+                Commit.decode decompressedObject |> Object.Commit |> ParsedPackObject.Object
+            | PackObjectType.ObjTree, None -> Tree.decode decompressedObject |> Object.Tree |> ParsedPackObject.Object
             | PackObjectType.ObjOfsDelta, Some (preamble, _) -> ParsedPackObject.Delta (preamble, decompressedObject)
             | PackObjectType.ObjRefDelta, Some (preamble, _) -> ParsedPackObject.Delta (preamble, decompressedObject)
-            | PackObjectType.ObjTag, None ->
-                Tag.decode decompressedObject
-                |> Object.Tag
-                |> ParsedPackObject.Object
+            | PackObjectType.ObjTag, None -> Tag.decode decompressedObject |> Object.Tag |> ParsedPackObject.Object
             | PackObjectType.ObjBlob, Some _
             | PackObjectType.ObjTag, Some _
             | PackObjectType.ObjTree, Some _
@@ -265,14 +254,10 @@ module PackFile =
 
     let private resolveDeltas (packs : (Hash * uint64 * (ParsedPackObject * PackObjectMetadata)) array) : PackObject[] =
         let packsByOffset =
-            packs
-            |> Seq.map (fun (hash, offset, data) -> offset, (hash, data))
-            |> Map.ofSeq
+            packs |> Seq.map (fun (hash, offset, data) -> offset, (hash, data)) |> Map.ofSeq
 
         let packsByHash =
-            packs
-            |> Seq.map (fun (hash, offset, data) -> hash, (offset, data))
-            |> Map.ofSeq
+            packs |> Seq.map (fun (hash, offset, data) -> hash, (offset, data)) |> Map.ofSeq
 
         let rec resolve (object : ParsedPackObject) (name : Hash) (metadata : PackObjectMetadata) : PackObject =
             match object with
@@ -324,8 +309,7 @@ module PackFile =
                 let nextObjectIndex =
                     // TODO probably binary search this, or maintain an incrementing
                     // counter
-                    sortedObjectPositions
-                    |> Array.tryFindIndex (fun pos -> pos > offset)
+                    sortedObjectPositions |> Array.tryFindIndex (fun pos -> pos > offset)
 
                 // Account for the case where the index file contains garbage
                 let startingIndex =
@@ -334,12 +318,10 @@ module PackFile =
                     | Some 0 -> uint64 stream.Position
                     | Some i -> sortedObjectPositions.[i - 1]
 
-                stream.Seek (int64 startingIndex, SeekOrigin.Begin)
-                |> ignore
+                stream.Seek (int64 startingIndex, SeekOrigin.Begin) |> ignore
 
                 let nextObjectPosition =
-                    nextObjectIndex
-                    |> Option.map (fun i -> sortedObjectPositions.[i])
+                    nextObjectIndex |> Option.map (fun i -> sortedObjectPositions.[i])
 
                 Hash.ofBytes name, startingIndex, parseObject nextObjectPosition crc stream
             )
@@ -389,13 +371,10 @@ module PackFile =
         let remainingBytes = Stream.consume s 3
 
         if firstByte >= 128uy then
-            toUint remainingBytes
-            + ((uint32 (firstByte % 128uy)) <<< 24)
+            toUint remainingBytes + ((uint32 (firstByte % 128uy)) <<< 24)
             |> PackIndexOffset.LayerFiveEntry
         else
-            toUint remainingBytes
-            + ((uint32 firstByte) <<< 24)
-            |> PackIndexOffset.RawOffset
+            toUint remainingBytes + ((uint32 firstByte) <<< 24) |> PackIndexOffset.RawOffset
 
     let readIndex (file : IFileInfo) : PackIndex =
         use s = file.OpenRead ()
@@ -523,16 +502,14 @@ module PackFile =
             if nameLookup = 0uy then
                 0L, Stream.consume packIndex 4 |> toUint |> int64
             else
-                packIndex.Seek ((int64 (nameLookup - 1uy)) * 4L, SeekOrigin.Current)
-                |> ignore
+                packIndex.Seek ((int64 (nameLookup - 1uy)) * 4L, SeekOrigin.Current) |> ignore
 
                 let before = Stream.consume packIndex 4 |> toUint |> int64
                 let after = Stream.consume packIndex 4 |> toUint |> int64
                 before, after
 
         let totalCount =
-            packIndex.Seek (4L + 4L + 255L * 4L, SeekOrigin.Begin)
-            |> ignore
+            packIndex.Seek (4L + 4L + 255L * 4L, SeekOrigin.Begin) |> ignore
 
             Stream.consume packIndex 4 |> toUint |> int64
 
@@ -566,14 +543,7 @@ module PackFile =
         | None -> None
         | Some location ->
 
-        packIndex.Seek (
-            4L
-            + 4L
-            + 256L * 4L
-            + totalCount * 24L
-            + location * 4L,
-            SeekOrigin.Begin
-        )
+        packIndex.Seek (4L + 4L + 256L * 4L + totalCount * 24L + location * 4L, SeekOrigin.Begin)
         |> ignore
 
         let index = consumeOffset packIndex
@@ -582,14 +552,7 @@ module PackFile =
             match index with
             | PackIndexOffset.RawOffset i -> int64 i
             | PackIndexOffset.LayerFiveEntry entry ->
-                packIndex.Seek (
-                    4L
-                    + 4L
-                    + 256L * 4L
-                    + totalCount * 28L
-                    + (int64 entry) * 8L,
-                    SeekOrigin.Begin
-                )
+                packIndex.Seek (4L + 4L + 256L * 4L + totalCount * 28L + (int64 entry) * 8L, SeekOrigin.Begin)
                 |> ignore
 
                 Stream.consume packIndex 8 |> toUint64 |> int64
@@ -610,16 +573,27 @@ module PackFile =
 
             match subObject with
             | None -> failwithf "Failed to find sub-object with name %s" (Hash.toString name)
-            | Some subObject ->
-                (subObject, data, hash, metadata)
-                |> PackObject.Delta
-                |> Some
-        | Preamble.Offset offset ->
-            (failwith "", data, hash, metadata)
-            |> PackObject.Delta
-            |> Some
+            | Some subObject -> (subObject, data, hash, metadata) |> PackObject.Delta |> Some
+        | Preamble.Offset offset -> (failwith "", data, hash, metadata) |> PackObject.Delta |> Some
 
     let locateObject (h : Hash) (packIndex : IFileInfo) (packFile : IFileInfo) : PackObject option =
         use index = packIndex.OpenRead ()
         use file = packFile.OpenRead ()
         locateObjectInStream h index file
+
+    /// Get all the pack files in this repository.
+    /// The resulting hash is a hash that can be interpolated into e.g. `id-%s.pack`,
+    /// or passed straight into `VerifyPack.verify`.
+    let allPacks (repo : Repository) : (Hash * IFileInfo) seq =
+        let gitDir = Repository.gitDir repo
+        let fs = repo.Fs
+
+        fs.Path.Combine (gitDir.FullName, "objects", "pack")
+        |> fs.DirectoryInfo.FromDirectoryName
+        |> fun di -> di.EnumerateFiles "*.pack"
+        |> Seq.map (fun fi ->
+            let hash =
+                fi.FullName |> String.chopStart "id-" |> String.chopEnd ".pack" |> Hash.ofString
+
+            hash, fi
+        )
